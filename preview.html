@@ -52,102 +52,107 @@
       line-height: 1.6;
     }
 
-    /* 커버 (2분할 레이아웃 - 기존 보고서 참고) */
+    /* 커버 (풀 배경 모던 레이아웃) */
     .cover-page {
-      background: #ffffff !important;
-      color: #0a1628;
+      background: #1a3669 !important;
+      color: #ffffff;
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       padding: 0 !important;
       overflow: hidden;
-    }
-    .cover-left {
-      flex: 6;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 60px 48px 40px;
       position: relative;
     }
-    .cover-right {
-      flex: 4;
-      background: #1a3669;
+    .cover-top {
+      padding: 48px 48px 0;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 24px;
-      position: relative;
-    }
-    .cover-right-logo {
-      height: 40px;
-      margin-bottom: auto;
-    }
-    .cover-right-circle {
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      border: 4px solid rgba(255,255,255,0.25);
-      overflow: hidden;
-      margin-bottom: auto;
-    }
-    .cover-right-circle img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .cover-right-footer {
-      font-size: 9px;
-      color: rgba(255,255,255,0.4);
-      text-align: center;
+      justify-content: flex-end;
+      align-items: flex-start;
     }
     .cover-doc-label {
-      font-size: 11px;
-      color: #4a90d9;
-      letter-spacing: 0.12em;
-      font-weight: 600;
-      margin-bottom: 12px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.15em;
+      font-weight: 500;
+    }
+    .cover-hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 48px;
+    }
+    .cover-glass {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 44px 48px;
+      width: 100%;
+      max-width: 520px;
+    }
+    .cover-accent-line {
+      width: 48px;
+      height: 3px;
+      background: #4a90d9;
+      border-radius: 2px;
+      margin-bottom: 20px;
     }
     .cover-title {
-      font-size: 32px;
+      font-size: 34px;
       font-weight: 700;
-      color: #1a3669;
+      color: #ffffff;
       letter-spacing: -0.03em;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       line-height: 1.2;
     }
+    .cover-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.06em;
+      font-weight: 400;
+      margin-bottom: 24px;
+    }
     .cover-address {
-      font-size: 14px;
-      color: #4a6a8a;
+      font-size: 15px;
+      color: rgba(255,255,255,0.85);
       font-weight: 500;
-      margin-bottom: 48px;
-      line-height: 1.5;
+      margin-bottom: 32px;
+      line-height: 1.6;
     }
-    .cover-info-table {
-      width: 100%;
-      max-width: 340px;
-      border-collapse: collapse;
-      font-size: 12px;
+    .cover-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
     }
-    .cover-info-table td {
-      padding: 7px 0;
-      border-bottom: 1px solid #e8eef6;
+    .cover-info-item {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .cover-info-table td:first-child {
-      color: #4a6a8a;
-      width: 90px;
-      font-size: 11px;
-    }
-    .cover-info-table td:last-child {
-      font-weight: 600;
-      color: #0a1628;
-    }
-    .cover-info-table tr:last-child td { border-bottom: none; }
-    .cover-footer {
-      position: absolute;
-      bottom: 24px;
-      left: 48px;
+    .cover-info-label {
       font-size: 9px;
-      color: #aab8c2;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .cover-info-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .cover-bottom {
+      padding: 0 48px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .cover-bottom-left {
+      font-size: 9px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.6;
+    }
+    .cover-bottom-logo {
+      height: 64px;
     }
 
     /* 간지 (섹션 구분 페이지) */
@@ -646,29 +651,42 @@ async function renderReport() {
   let pages = [];
   let pageNum = 1;
 
-  // ── Page 1: 표지 (2분할 레이아웃) ──
+  // ── Page 1: 표지 (모던 풀배경) ──
   pages.push(`
     <div class="report-page cover-page">
       <span class="page-label no-print">표지</span>
-      <div class="cover-left">
+      <div class="cover-top">
         <div class="cover-doc-label">BUILDING INSPECTION REPORT</div>
-        <div class="cover-title">주택 진단 보고서</div>
-        <div class="cover-address">${val(report.basic.address, '')}<br>${val(report.basic.unit, '')}</div>
-        <table class="cover-info-table">
-          <tr><td>진단일자</td><td>${val(report.basic.inspectionDate, '-')}</td></tr>
-          <tr><td>의뢰인</td><td>${val(report.basic.clientName, '-')}</td></tr>
-          <tr><td>진단자</td><td>${val(report.basic.inspectorName, '-')}</td></tr>
-          <tr><td>보고서 번호</td><td>${val(report.basic.reportNo, '-')}</td></tr>
-          <tr><td>작성일</td><td>${val(report.basic.reportDate, '-')}</td></tr>
-        </table>
-        <div class="cover-footer">더보다 AI (home.theboda.io)</div>
       </div>
-      <div class="cover-right">
-        <img src="assets/ci-logo-light.png" alt="더보다" class="cover-right-logo">
-        <div class="cover-right-circle">
-          <img src="assets/inspector-01.png" alt="Building Inspector">
+      <div class="cover-hero">
+        <div class="cover-glass">
+          <div class="cover-accent-line"></div>
+          <div class="cover-title">주택 진단 보고서</div>
+          <div class="cover-subtitle">Housing Inspection Report</div>
+          <div class="cover-address">${val(report.basic.address, '')}<br>${val(report.basic.unit, '')}</div>
+          <div class="cover-info-grid">
+            <div class="cover-info-item">
+              <div class="cover-info-label">진단일자</div>
+              <div class="cover-info-value">${val(report.basic.inspectionDate, '-')}</div>
+            </div>
+            <div class="cover-info-item">
+              <div class="cover-info-label">의뢰인</div>
+              <div class="cover-info-value">${val(report.basic.clientName, '-')}</div>
+            </div>
+            <div class="cover-info-item">
+              <div class="cover-info-label">진단자</div>
+              <div class="cover-info-value">${val(report.basic.inspectorName, '-')}</div>
+            </div>
+            <div class="cover-info-item">
+              <div class="cover-info-label">보고서 번호</div>
+              <div class="cover-info-value">${val(report.basic.reportNo, '-')}</div>
+            </div>
+          </div>
         </div>
-        <div class="cover-right-footer">Building Inspection</div>
+      </div>
+      <div class="cover-bottom">
+        <div class="cover-bottom-left">더보다 AI<br>home.theboda.io</div>
+        <img src="assets/ci-logo-light.png" alt="더보다" class="cover-bottom-logo">
       </div>
     </div>
   `);
@@ -724,10 +742,10 @@ async function renderReport() {
       <div style="font-size:10px; color:#4a6a8a; line-height:1.7; white-space:pre-wrap">${escapeHTML(b.managementIssues)}</div>
     ` : ''}
     <div class="rpt-section-title">평면도</div>
-    <div id="preview-floorplan" style="min-height:80px; background:#f4f7fb; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px">
+    <div id="preview-floorplan" style="max-height:340px; background:#f4f7fb; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px">
       <span style="font-size:9px; color:#aab8c2">평면도 로딩중...</span>
     </div>
-    <table class="info-table" style="margin-top:16px">
+    <table class="info-table" style="margin-top:12px">
       <tr>
         <td class="label-cell">진단일자</td><td>${val(b.inspectionDate)}</td>
         <td class="label-cell">진단자명</td><td>${val(b.inspectorName)}</td>
@@ -1368,11 +1386,164 @@ async function renderReport() {
   const fpContainer = document.getElementById('preview-floorplan');
   if (fpContainer) {
     if (fpBase64) {
-      fpContainer.innerHTML = `<img src="${fpBase64}" alt="평면도" style="width:100%; height:auto; border-radius:4px">`;
+      fpContainer.innerHTML = `<img src="${fpBase64}" alt="평면도" style="width:100%; max-height:340px; object-fit:contain; border-radius:4px">`;
     } else {
       fpContainer.innerHTML = '<span style="font-size:9px; color:#aab8c2">평면도 미등록</span>';
     }
   }
+
+  // 이미지 로딩 완료 후 페이지 분할
+  await new Promise(r => setTimeout(r, 200));
+  splitOverflowPages(report);
+}
+
+// ==========================================
+// 페이지 자동 분할 시스템
+// A4 높이를 초과하는 report-page를 자식 노드 단위로
+// 분할하여 각 페이지에 머릿글/바닥글 삽입
+// ==========================================
+function splitOverflowPages(report) {
+  const viewer = document.getElementById('report-viewer');
+  // A4 = 297mm, padding top 20mm + bottom 28mm = 48mm → content = 249mm
+  // 바닥글 영역 약 18mm 확보 → 실제 가용 = ~231mm
+  // 96dpi 기준 1mm ≈ 3.78px → ~873px, 여유 두고 850px
+  const MAX_CONTENT_H = 850;
+  const HEADER_RESERVE = 60; // 머릿글 + 제목 높이 예약
+  const FOOTER_RESERVE = 50; // 바닥글 높이 예약
+
+  const allPages = Array.from(viewer.querySelectorAll('.report-page'));
+  let globalPageNum = 1;
+
+  for (const page of allPages) {
+    // 표지, 간지는 건너뜀
+    if (page.classList.contains('cover-page') || page.classList.contains('divider-page')) {
+      globalPageNum++;
+      continue;
+    }
+
+    // 실제 콘텐츠 높이 측정 (padding 제외 scrollHeight)
+    const contentHeight = page.scrollHeight;
+    const style = getComputedStyle(page);
+    const padTop = parseFloat(style.paddingTop) || 0;
+    const padBottom = parseFloat(style.paddingBottom) || 0;
+    const innerHeight = contentHeight - padTop - padBottom;
+
+    if (innerHeight <= MAX_CONTENT_H) {
+      // 바닥글 페이지 번호 업데이트
+      const footer = page.querySelector('.rpt-footer');
+      if (footer) {
+        const spans = footer.querySelectorAll('span');
+        if (spans.length >= 3) spans[2].textContent = globalPageNum;
+      }
+      globalPageNum++;
+      continue;
+    }
+
+    // === 분할 필요 ===
+    // 헤더와 바닥글 추출
+    const header = page.querySelector('.rpt-header');
+    const pageTitle = page.querySelector('.rpt-page-title');
+    const footer = page.querySelector('.rpt-footer');
+    const headerHTML = header ? header.outerHTML : '';
+    const titleHTML = pageTitle ? pageTitle.outerHTML : '';
+    const footerHTML = footer ? footer.outerHTML : '';
+
+    // 분할 대상 자식 노드들 수집 (헤더, 제목, 바닥글, page-label 제외)
+    const children = Array.from(page.children).filter(el =>
+      !el.classList.contains('rpt-header') &&
+      !el.classList.contains('rpt-page-title') &&
+      !el.classList.contains('rpt-footer') &&
+      !el.classList.contains('page-label')
+    );
+
+    // 새 페이지들을 생성
+    const newPages = [];
+    let currentChildren = [];
+    let currentH = HEADER_RESERVE;
+
+    function flushPage() {
+      if (currentChildren.length === 0) return;
+      const pg = document.createElement('div');
+      pg.className = 'report-page rpt-body';
+      pg.style.position = 'relative';
+
+      // 페이지 번호 라벨
+      const lbl = document.createElement('span');
+      lbl.className = 'page-label no-print';
+      lbl.textContent = 'Page ' + globalPageNum;
+      pg.appendChild(lbl);
+
+      // 헤더 (첫 페이지만 제목 포함, 이후는 헤더만)
+      if (newPages.length === 0) {
+        pg.insertAdjacentHTML('beforeend', headerHTML);
+        pg.insertAdjacentHTML('beforeend', titleHTML);
+      } else {
+        pg.insertAdjacentHTML('beforeend', headerHTML);
+        // 연속 페이지 표시
+        const contLabel = document.createElement('div');
+        contLabel.style.cssText = 'font-size:9px; color:#4a6a8a; margin-bottom:10px; font-style:italic';
+        contLabel.textContent = '(이전 페이지에서 계속)';
+        pg.appendChild(contLabel);
+      }
+
+      currentChildren.forEach(el => pg.appendChild(el));
+
+      // 바닥글
+      const fDiv = document.createElement('div');
+      fDiv.className = 'rpt-footer';
+      fDiv.innerHTML = `
+        <span>더보다 AI - 주택 진단 보고서</span>
+        <span>${val(report.basic.address, '주소 미입력')}</span>
+        <span>${globalPageNum}</span>
+      `;
+      pg.appendChild(fDiv);
+
+      newPages.push(pg);
+      globalPageNum++;
+      currentChildren = [];
+      currentH = HEADER_RESERVE;
+    }
+
+    for (const child of children) {
+      const childH = child.offsetHeight || child.scrollHeight || 0;
+
+      // 이 자식을 추가하면 초과하는 경우 → 현재 페이지 마감 후 다음으로
+      if (currentH + childH + FOOTER_RESERVE > MAX_CONTENT_H && currentChildren.length > 0) {
+        flushPage();
+      }
+
+      currentChildren.push(child);
+      currentH += childH;
+    }
+    // 마지막 페이지 마감
+    flushPage();
+
+    // 원본 페이지를 새 페이지들로 교체
+    for (const np of newPages) {
+      page.parentNode.insertBefore(np, page);
+    }
+    page.remove();
+  }
+
+  // 최종 페이지 번호 재정렬 (표지/간지 포함 전체)
+  let finalNum = 1;
+  const finalPages = viewer.querySelectorAll('.report-page');
+  finalPages.forEach(pg => {
+    const lbl = pg.querySelector('.page-label');
+    if (pg.classList.contains('cover-page')) {
+      if (lbl) lbl.textContent = '표지';
+    } else if (pg.classList.contains('divider-page')) {
+      if (lbl) lbl.textContent = '간지';
+    } else {
+      if (lbl) lbl.textContent = 'Page ' + finalNum;
+      const footer = pg.querySelector('.rpt-footer');
+      if (footer) {
+        const spans = footer.querySelectorAll('span');
+        if (spans.length >= 3) spans[2].textContent = finalNum;
+      }
+      finalNum++;
+    }
+  });
 }
 
 async function loadAllCardImages(report) {
@@ -1392,13 +1563,14 @@ async function loadAllCardImages(report) {
         const base64 = await Report.loadImage(photo.id);
         const titleText = photo.captionTitle || photo.caption || '';
         const detailText = photo.captionDetail || '';
-        const obsText = photo.observation || '';
+        // observation은 detailText와 중복되는 경우 생략
+        const obsText = (photo.observation && photo.observation !== detailText) ? photo.observation : '';
+        // 캡션을 하나로 합침 (제목: 굵게, 설명은 이어서)
+        const captionParts = [titleText, detailText, obsText].filter(Boolean);
         if (base64) {
           cellEl.innerHTML = `
             <img src="${base64}" alt="${photo.name || '사진'}">
-            ${titleText ? `<div class="photo-cell-caption" style="font-weight:600;color:#0a1628">${escapeHTML(titleText)}</div>` : ''}
-            ${detailText ? `<div class="photo-cell-caption" style="font-size:7.5px">${escapeHTML(detailText)}</div>` : ''}
-            ${obsText ? `<div class="photo-cell-caption">${escapeHTML(obsText)}</div>` : ''}
+            ${captionParts.length > 0 ? `<div class="photo-cell-caption"><span style="font-weight:600;color:#0a1628">${escapeHTML(captionParts[0])}</span>${captionParts.length > 1 ? ' - ' + escapeHTML(captionParts.slice(1).join(' / ')) : ''}</div>` : ''}
           `;
         } else {
           cellEl.innerHTML = '<div style="background:#f4f7fb;padding:20px;text-align:center;font-size:9px;color:#aab8c2;border-radius:4px">사진 없음</div>';
