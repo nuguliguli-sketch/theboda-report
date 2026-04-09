@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보고서 입력 - 더보다 AI</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    /* 페이지별 추가 스타일 */
+    .input-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .autosave-indicator {
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+    .section-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .section-tab {
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+      transition: all 0.2s;
+    }
+    .section-tab:hover {
+      border-color: var(--border-hover);
+      color: var(--text-secondary);
+    }
+    .section-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+
+    /* 세부진단 카테고리 제목 */
+    .detail-cat-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      padding: 8px 0 4px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--primary-glow);
+    }
+
+    /* 룸 목록 아이템 */
+    .room-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .room-item input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 5px 8px;
+      font-family: var(--font-family);
+    }
+    .room-item input:focus {
+      border-color: var(--border-focus);
+      outline: none;
+    }
+    .room-item select {
+      width: 80px;
+      font-size: 11px;
+    }
+    .room-item .room-remove {
+      background: none;
+      border: none;
+      color: var(--status-danger);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      opacity: 0.6;
+    }
+    .room-item .room-remove:hover { opacity: 1; }
+
+    /* 내구연한 테이블 */
+    .dur-table input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 5px 8px;
+      font-family: var(--font-family);
+    }
+    .dur-table .status-group { flex-wrap: nowrap; }
+
+    /* 진행 바 */
+    .progress-bar-wrap {
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      height: 6px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+      transition: width 0.5s ease;
+    }
+
+    /* 카테고리 세부항목 상태 그리드 (2열) */
+    .cat-sub-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    .cat-sub-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .cat-sub-row .sub-name {
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      font-size: 11px;
+      min-width: 0;
+      flex-shrink: 1;
+    }
+    .cat-sub-row .status-group { flex-wrap: nowrap; flex-shrink: 0; }
+    .cat-sub-row .status-option label {
+      padding: 2px 8px;
+      font-size: 10px;
+    }
+
+    /* 종합의견 인라인 */
+    .cat-opinion-wrap {
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+    .cat-opinion-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-opinion-wrap textarea {
+      min-height: 60px;
+    }
+
+    /* 안내 문구 */
+    .info-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(74, 144, 217, 0.08);
+      border-left: 3px solid var(--primary);
+      padding: 8px 12px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+    }
+
+    /* ─── 고정 테이블 ─── */
+    .fixed-table-wrap {
+      margin-bottom: 16px;
+    }
+    .fixed-table-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-light);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .fixed-table-title::before {
+      content: '\25AA';
+    }
+    .measurement-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .measurement-table th {
+      background: rgba(74, 144, 217, 0.15);
+      color: var(--primary-light);
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .measurement-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .measurement-table input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 11px;
+      padding: 4px 6px;
+      font-family: var(--font-family);
+    }
+    .measurement-table input:focus {
+      border-color: var(--border-focus);
+      background: var(--bg-input-focus);
+      outline: none;
+    }
+    .measurement-table .item-label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .ftable-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .ftable-actions .btn {
+      font-size: 10px;
+      padding: 3px 10px;
+    }
+    .row-remove-btn {
+      background: none;
+      border: none;
+      color: var(--status-danger);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .row-remove-btn:hover {
+      background: rgba(192, 57, 43, 0.15);
+    }
+
+    /* ─── 동적 카드 ─── */
+    .cards-section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 16px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .field-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .card-title-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 12px;
+      font-family: var(--font-family);
+    }
+    .card-title-input:focus {
+      border-color: var(--border-focus);
+      background: var(--bg-input-focus);
+      outline: none;
+    }
+    .card-title-input::placeholder {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* 사진 배치 선택 */
+    .photo-layout-select {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .photo-layout-select label {
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    .layout-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-btn);
+      color: var(--text-muted);
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: all 0.2s;
+    }
+    .layout-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-secondary);
+    }
+    .layout-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    /* 사진 텍스트 숨기기 */
+    .photo-text-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .photo-text-toggle input[type="checkbox"] {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .photo-slots.hide-text .photo-caption-wrap,
+    .photo-slots.hide-text .photo-observation {
+      display: none;
+    }
+
+    /* 사진 슬롯 */
+    .photo-slots {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .photo-slots[data-layout="0"] { display: none; }
+    .photo-slots[data-layout="1"] { grid-template-columns: 1fr; }
+    .photo-slots[data-layout="2"] { grid-template-columns: 1fr 1fr; }
+    .photo-slots[data-layout="3"] { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-slots[data-layout="4"] { grid-template-columns: 1fr 1fr; }
+    .photo-slots[data-layout="6"] { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-slots[data-layout="8"] { grid-template-columns: 1fr 1fr; }
+    .photo-slot {
+      aspect-ratio: 4/3;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.02);
+    }
+    .photo-slot:hover {
+      border-color: var(--primary);
+      background: rgba(74, 144, 217, 0.05);
+    }
+    .photo-slot input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .photo-slot .slot-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .photo-slot .slot-icon {
+      font-size: 20px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      pointer-events: none;
+    }
+    .photo-slot.has-image {
+      border-style: solid;
+      border-color: var(--border);
+    }
+    .photo-slot.has-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+    }
+    .photo-slot .photo-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(192,57,43,0.85);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+    }
+    .photo-slot .photo-observation {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 0 0 6px 6px;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 11px;
+      padding: 6px 8px;
+      resize: vertical;
+      min-height: 40px;
+      line-height: 1.4;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .photo-slot .photo-observation:focus {
+      border-color: var(--border-focus);
+    }
+    .photo-slot .photo-observation::placeholder {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+    .photo-caption-wrap {
+      width: 100%;
+      position: relative;
+      margin-top: auto;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    /* 내용이 있거나 hover/focus 시 표시 */
+    .photo-slot:hover .photo-caption-wrap,
+    .photo-caption-wrap:focus-within,
+    .photo-caption-wrap.has-content {
+      opacity: 1;
+    }
+    .photo-slot .photo-caption-title {
+      width: 100%;
+      background: rgba(0,0,0,0.6);
+      border: none;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px 1px;
+      text-align: center;
+      font-family: var(--font-family);
+      outline: none;
+      box-sizing: border-box;
+    }
+    .photo-slot .photo-caption-detail {
+      width: 100%;
+      background: rgba(0,0,0,0.45);
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.9);
+      font-size: 9px;
+      padding: 2px 8px 3px;
+      text-align: center;
+      font-family: var(--font-family);
+      outline: none;
+      box-sizing: border-box;
+      resize: none;
+      min-height: 18px;
+      line-height: 1.3;
+    }
+    .photo-slot .photo-caption-title:focus,
+    .photo-slot .photo-caption-detail:focus {
+      background: rgba(0,0,0,0.8);
+    }
+    .photo-slot .photo-caption-title::placeholder {
+      color: rgba(255,255,255,0.45);
+      font-weight: 400;
+    }
+    .photo-slot .photo-caption-detail::placeholder {
+      color: rgba(255,255,255,0.35);
+    }
+    /* 관찰내용: 빈 상태면 숨기고, hover/focus/내용있을 때 표시 */
+    .photo-slot .photo-observation {
+      transition: all 0.2s;
+    }
+    .photo-slot .photo-observation:not(.has-content):not(:focus) {
+      min-height: 0;
+      height: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+      overflow: hidden;
+    }
+    .photo-slot:hover .photo-observation {
+      min-height: 40px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      opacity: 1;
+    }
+
+    /* 세부 판정 */
+    .sub-judgments {
+      margin-bottom: 12px;
+    }
+    .sub-judgments-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .sub-judgments-header span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .sub-judgment-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      padding: 4px 0;
+    }
+    .sj-name {
+      width: 140px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 11px;
+      padding: 4px 6px;
+      font-family: var(--font-family);
+    }
+    .sj-name:focus {
+      border-color: var(--border-focus);
+      outline: none;
+    }
+    .sub-judgment-row .status-group {
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+    }
+    .sub-judgment-row .status-option label {
+      padding: 2px 8px;
+      font-size: 10px;
+    }
+    .sj-remove {
+      background: none;
+      border: none;
+      color: var(--status-danger);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 4px;
+      opacity: 0.7;
+    }
+    .sj-remove:hover { opacity: 1; }
+
+    /* 카드 textarea */
+    .field-card textarea {
+      width: 100%;
+      min-height: 50px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 8px 10px;
+      font-family: var(--font-family);
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+    .field-card textarea:focus {
+      border-color: var(--border-focus);
+      background: var(--bg-input-focus);
+      outline: none;
+    }
+    .field-card .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    /* 카드 추가 버튼 */
+    .add-card-btn {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .add-card-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(74, 144, 217, 0.05);
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">더보다 AI</div>
+      <div class="logo-sub">주택 진단 보고서 시스템</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">메뉴</div>
+        <a href="list.html" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          보고서 목록
+        </a>
+        <a href="index.html" class="nav-item active">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          보고서 입력
+        </a>
+        <a href="preview.html" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          미리보기 / 출력
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">데이터</div>
+        <div class="nav-item" onclick="Report.exportJSON()">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          JSON 내보내기
+        </div>
+        <label class="nav-item" style="cursor:pointer">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          JSON 불러오기
+          <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+        </label>
+        <div class="nav-item" onclick="confirmClear()" style="color: var(--status-danger)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          초기화
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size:11px; color: var(--text-muted)">
+        더보다 AI v3.0
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-title">보고서 입력</div>
+      <div class="input-header-actions">
+        <div id="autosave-indicator" class="autosave-indicator" style="font-size:11px; color:var(--text-muted); opacity:0.5; transition:all 0.3s">-</div>
+        <div id="progress-text" style="font-size:12px; color:var(--text-muted)">입력 0%</div>
+        <button class="btn btn-secondary btn-sm" onclick="saveDraft()" id="save-btn" style="display:flex;align-items:center;gap:4px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          임시저장
+          <kbd style="font-size:9px;background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px;margin-left:2px">Ctrl+S</kbd>
+        </button>
+        <a href="preview.html" class="btn btn-primary btn-sm" onclick="saveAndPreview(); return false;">미리보기</a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="page-content">
+
+      <!-- 진행률 -->
+      <div class="progress-summary" id="stats-bar" style="margin-bottom:20px"></div>
+
+      <!-- 탭 네비게이션 -->
+      <div class="section-nav" id="section-nav">
+        <button class="section-tab active" data-tab="tab-basic">기본정보</button>
+        <button class="section-tab" data-tab="tab-detail">세부진단</button>
+        <button class="section-tab" data-tab="tab-indicator">종합지표</button>
+        <button class="section-tab" data-tab="tab-durability">내구연한</button>
+        <button class="section-tab" data-tab="tab-summary">종합판단</button>
+        <button class="section-tab" data-tab="tab-expert">전문가의견</button>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 1: 기본정보
+      ═══════════════════════════════════ -->
+      <div id="tab-basic" class="form-section active">
+        <div class="card">
+          <div class="card-title">세대 기본정보 <span class="badge">p.3</span></div>
+          <div class="form-grid">
+            <div class="form-group span-2">
+              <label>주소 <span class="required">*</span></label>
+              <input type="text" id="basic_address" placeholder="예) 경기도 수원시 영통구 영통로498 영통포레파크원">
+            </div>
+            <div class="form-group">
+              <label>호수</label>
+              <input type="text" id="basic_unit" placeholder="예) 130동 1406호">
+            </div>
+            <div class="form-group">
+              <label>전용면적 (m2)</label>
+              <input type="text" id="basic_area" placeholder="예) 59.99">
+            </div>
+            <div class="form-group">
+              <label>공급면적 (m2)</label>
+              <input type="text" id="basic_supplyArea" placeholder="예) 83.14">
+            </div>
+            <div class="form-group">
+              <label>준공연도 <span class="required">*</span></label>
+              <input type="text" id="basic_buildingYear" placeholder="예) 1997" oninput="onBuildingYearChange(this.value)">
+            </div>
+            <div class="form-group">
+              <label>총층수</label>
+              <input type="text" id="basic_floorTotal" placeholder="예) 15층">
+            </div>
+            <div class="form-group">
+              <label>해당층</label>
+              <input type="text" id="basic_floorUnit" placeholder="예) 14층">
+            </div>
+            <div class="form-group">
+              <label>구조</label>
+              <input type="text" id="basic_structure" placeholder="예) 철근콘크리트조">
+            </div>
+            <div class="form-group">
+              <label>용도</label>
+              <input type="text" id="basic_usage" placeholder="예) 공동주택(아파트)">
+            </div>
+            <div class="form-group">
+              <label>난방방식</label>
+              <input type="text" id="basic_heatingType" placeholder="예) 지역난방">
+            </div>
+            <div class="form-group">
+              <label>확장여부</label>
+              <input type="text" id="basic_extensionStatus" placeholder="예) 확장없음">
+            </div>
+            <div class="form-group">
+              <label>현재 거주상태</label>
+              <input type="text" id="basic_currentOccupancy" placeholder="예) 현재 공실">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">보고서 정보</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>진단일자 <span class="required">*</span></label>
+              <input type="date" id="basic_inspectionDate">
+            </div>
+            <div class="form-group">
+              <label>보고서 작성일</label>
+              <input type="date" id="basic_reportDate">
+            </div>
+            <div class="form-group">
+              <label>진단자명</label>
+              <input type="text" id="basic_inspectorName" placeholder="예) 홍길동">
+            </div>
+            <div class="form-group">
+              <label>의뢰인</label>
+              <input type="text" id="basic_clientName" placeholder="예) 김OO">
+            </div>
+            <div class="form-group">
+              <label>보고서 번호 (자동생성)</label>
+              <input type="text" id="basic_reportNo" placeholder="자동생성됨" readonly style="opacity:0.7">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">단지관리 이슈</div>
+          <div class="form-group">
+            <textarea id="basic_managementIssues" rows="3" placeholder="단지 관련 특이사항을 입력하세요. (예: 인터넷 품질개선 공사 안내, 최근 5년내 대규모 공사 이력 등)"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">평면도</div>
+          <div class="info-note">룸 이름이 표기된 평면도 이미지를 업로드하세요. (PPT 등에서 작업한 이미지)</div>
+          <div id="floorplan-upload" style="border:1.5px dashed var(--border); border-radius:8px; min-height:220px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer; background:rgba(255,255,255,0.02)" onclick="document.getElementById('floorplan-file').click()">
+            <div id="floorplan-placeholder" style="text-align:center; color:var(--text-muted); font-size:12px">
+              <div style="font-size:28px; margin-bottom:4px">+</div>
+              평면도 업로드
+            </div>
+            <img id="floorplan-preview" src="" alt="" style="display:none; width:100%; height:auto; max-height:400px; object-fit:contain">
+            <button id="floorplan-remove-btn" style="display:none; position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; background:rgba(192,57,43,0.85); color:#fff; border:none; cursor:pointer; font-size:13px; z-index:2" onclick="event.stopPropagation(); removeFloorPlan()">&times;</button>
+            <input type="file" id="floorplan-file" accept="image/*" style="display:none" onchange="uploadFloorPlan(this)">
+          </div>
+        </div>
+
+        <div class="tab-nav-buttons">
+          <div></div>
+          <button class="btn btn-primary" onclick="goToTab(1)">다음 (세부진단) &rarr;</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 2: 세부진단
+      ═══════════════════════════════════ -->
+      <div id="tab-detail" class="form-section">
+        <div id="detail-items-container"></div>
+
+        <div class="tab-nav-buttons">
+          <button class="btn btn-secondary" onclick="goToTab(0)">&larr; 이전 (기본정보)</button>
+          <button class="btn btn-primary" onclick="goToTab(2)">다음 (종합지표) &rarr;</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 3: 종합지표
+      ═══════════════════════════════════ -->
+      <div id="tab-indicator" class="form-section">
+        <div class="card">
+          <div class="card-title">핵심 안전리스크 항목 <span class="badge">p.4</span></div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="form-group">
+              <label>가스 누설 및 안전</label>
+              <div class="status-group" id="sg_gasSafety"></div>
+            </div>
+            <div class="form-group">
+              <label>가스 안전 의견</label>
+              <input type="text" id="indicators_gasSafetyComment" placeholder="가스 관련 특이사항">
+            </div>
+            <div class="form-group">
+              <label>전기 안전</label>
+              <div class="status-group" id="sg_electricalSafety"></div>
+            </div>
+            <div class="form-group">
+              <label>전기 안전 의견</label>
+              <input type="text" id="indicators_electricalSafetyComment" placeholder="전기 관련 특이사항">
+            </div>
+            <div class="form-group">
+              <label>구조 및 낙상 위험</label>
+              <div class="status-group" id="sg_structuralSafety"></div>
+            </div>
+            <div class="form-group">
+              <label>구조 안전 의견</label>
+              <input type="text" id="indicators_structuralSafetyComment" placeholder="구조 관련 특이사항">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">상대적 성능 참고 지표</div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="form-group">
+              <label>설비 작동 성능</label>
+              <div class="status-group" id="sg_equipmentPerformance"></div>
+            </div>
+            <div class="form-group">
+              <label>환경 쾌적 성능</label>
+              <div class="status-group" id="sg_environmentComfort"></div>
+            </div>
+            <div class="form-group">
+              <label>단열 열환경 성능</label>
+              <div class="status-group" id="sg_insulationPerformance"></div>
+            </div>
+            <div class="form-group">
+              <label>마감 편의 성능</label>
+              <div class="status-group" id="sg_finishPerformance"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">비용리스크 세부</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>난방배관 예상비용</label>
+              <input type="text" id="indicators_heatingPipeCost" placeholder="예) 200~500만원">
+            </div>
+            <div class="form-group">
+              <label>난방배관 의견</label>
+              <input type="text" id="indicators_heatingPipeComment" placeholder="의견">
+            </div>
+            <div class="form-group">
+              <label>욕실/발코니 방수 예상비용</label>
+              <input type="text" id="indicators_bathroomWaterproofCost" placeholder="예) 150~300만원">
+            </div>
+            <div class="form-group">
+              <label>방수 의견</label>
+              <input type="text" id="indicators_bathroomWaterproofComment" placeholder="의견">
+            </div>
+            <div class="form-group">
+              <label>창호 및 외벽 예상비용</label>
+              <input type="text" id="indicators_windowExteriorCost" placeholder="예) 50~150만원">
+            </div>
+            <div class="form-group">
+              <label>창호/외벽 의견</label>
+              <input type="text" id="indicators_windowExteriorComment" placeholder="의견">
+            </div>
+            <div class="form-group">
+              <label>급수/배수 배관 예상비용</label>
+              <input type="text" id="indicators_plumbingCost" placeholder="예) 100~250만원">
+            </div>
+            <div class="form-group">
+              <label>배관 의견</label>
+              <input type="text" id="indicators_plumbingComment" placeholder="의견">
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>예상 총 수선비용 하한 (만원)</label>
+                <input type="number" id="indicators_repairCostMin" placeholder="자동계산" readonly style="background:var(--bg-elevated);font-weight:600">
+              </div>
+              <div class="form-group">
+                <label>예상 총 수선비용 상한 (만원)</label>
+                <input type="number" id="indicators_repairCostMax" placeholder="자동계산" readonly style="background:var(--bg-elevated);font-weight:600">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">환경 성능 참고지표</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>일조시간</label>
+              <select id="indicators_sunlightGrade" class="form-select">
+                <option value="">미선택</option>
+                <option value="A">A등급</option>
+                <option value="B">B등급</option>
+                <option value="C">C등급</option>
+                <option value="D">D등급</option>
+                <option value="E">E등급</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>개방감(뷰)</label>
+              <select id="indicators_opennessGrade" class="form-select">
+                <option value="">미선택</option>
+                <option value="A">A등급</option>
+                <option value="B">B등급</option>
+                <option value="C">C등급</option>
+                <option value="D">D등급</option>
+                <option value="E">E등급</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>일사량</label>
+              <select id="indicators_solarGrade" class="form-select">
+                <option value="">미선택</option>
+                <option value="A">A등급</option>
+                <option value="B">B등급</option>
+                <option value="C">C등급</option>
+                <option value="D">D등급</option>
+                <option value="E">E등급</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-nav-buttons">
+          <button class="btn btn-secondary" onclick="goToTab(1)">&larr; 이전 (세부진단)</button>
+          <button class="btn btn-primary" onclick="goToTab(3)">다음 (내구연한) &rarr;</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 4: 내구연한
+      ═══════════════════════════════════ -->
+      <div id="tab-durability" class="form-section">
+        <div class="card">
+          <div class="card-title">주요항목 내구연한 검토 <span class="badge">p.5</span></div>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>준공연도</label>
+              <input type="number" id="dur_buildYear" placeholder="예) 1997" oninput="calcDurabilityFromYear()">
+            </div>
+            <div class="form-group">
+              <label>준공월</label>
+              <select id="dur_buildMonth" onchange="calcDurabilityFromYear()">
+                <option value="">미선택</option>
+                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end">
+              <div style="font-size:13px;font-weight:600;color:var(--primary);padding-bottom:8px" id="dur_elapsedDisplay">경과: -</div>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table dur-table" id="durability-table">
+              <thead>
+                <tr>
+                  <th style="width:120px">항목</th>
+                  <th style="width:80px">표준연한(년)</th>
+                  <th style="width:80px">경과연수(년)</th>
+                  <th style="width:80px">잔여연한(년)</th>
+                  <th style="width:180px">판정</th>
+                  <th>비고</th>
+                </tr>
+              </thead>
+              <tbody id="durability-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-nav-buttons">
+          <button class="btn btn-secondary" onclick="goToTab(2)">&larr; 이전 (종합지표)</button>
+          <button class="btn btn-primary" onclick="goToTab(4)">다음 (종합판단) &rarr;</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 5: 종합판단
+      ═══════════════════════════════════ -->
+      <div id="tab-summary" class="form-section">
+        <div class="card">
+          <div class="card-title">종합판단요약 <span class="badge">p.6</span></div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="form-group">
+              <label>종합 판정</label>
+              <div class="status-group" id="sg_overallStatus"></div>
+            </div>
+            <div class="form-group">
+              <label>종합 요약문</label>
+              <textarea id="summary_summaryText" rows="5" placeholder="보고서 전체에 대한 종합 요약 의견을 입력하세요."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">자동 분석 데이터 <span class="badge" style="background:var(--primary)">자동</span></div>
+          <div class="info-note">아래 데이터는 입력된 진단 내용에서 자동 추출됩니다. 미리보기에 반영됩니다.</div>
+          <div id="auto-analysis-preview" style="font-size:12px; color:var(--text-secondary)">
+            데이터를 분석하려면 아래 버튼을 누르세요.
+          </div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="refreshAutoAnalysis()">분석 데이터 새로고침</button>
+        </div>
+
+        <div class="tab-nav-buttons">
+          <button class="btn btn-secondary" onclick="goToTab(3)">&larr; 이전 (내구연한)</button>
+          <button class="btn btn-primary" onclick="goToTab(5)">다음 (전문가의견) &rarr;</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           탭 6: 전문가의견
+      ═══════════════════════════════════ -->
+      <div id="tab-expert" class="form-section">
+        <div class="card">
+          <div class="card-title">전문가 분석의견 <span class="badge">p.7</span></div>
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="form-group">
+              <label>안전 리스크</label>
+              <textarea id="expert_safetyRisk" rows="6" placeholder="안전 관련 항목에 대한 전문가 분석 의견을 기술하세요."></textarea>
+            </div>
+            <div class="form-group">
+              <label>비용 리스크</label>
+              <textarea id="expert_costRisk" rows="6" placeholder="비용 관련 리스크에 대한 전문가 분석 의견을 기술하세요."></textarea>
+            </div>
+            <div class="form-group">
+              <label>성능 및 거주체감</label>
+              <textarea id="expert_livingPerformance" rows="6" placeholder="거주 환경 및 성능 체감에 대한 전문가 의견을 기술하세요."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-nav-buttons">
+          <button class="btn btn-secondary" onclick="goToTab(4)">&larr; 이전 (종합판단)</button>
+          <button class="btn btn-primary btn-lg" onclick="saveAndPreview()">저장 후 미리보기</button>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="assets/report.js"></script>
+<script>
+// ==========================================
+// 탭 순서 배열
+// ==========================================
+const TAB_ORDER = ['tab-basic', 'tab-detail', 'tab-indicator', 'tab-durability', 'tab-summary', 'tab-expert'];
+
+// ==========================================
+// 탭 전환
+// ==========================================
+function switchTab(tabId) {
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  const btn = document.querySelector(`.section-tab[data-tab="${tabId}"]`);
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goToTab(index) {
+  if (index >= 0 && index < TAB_ORDER.length) {
+    switchTab(TAB_ORDER[index]);
+  }
+}
+
+// 탭 버튼 클릭 이벤트
+document.getElementById('section-nav').addEventListener('click', (e) => {
+  const btn = e.target.closest('.section-tab');
+  if (!btn) return;
+  switchTab(btn.dataset.tab);
+});
+
+// ==========================================
+// 상태 라디오 그룹 생성
+// ==========================================
+function createStatusGroup(container, name, currentValue) {
+  const statuses = [
+    { value: 'good', label: '특이사항없음', cls: 'good' },
+    { value: 'normal', label: '경미/관리필요', cls: 'normal' },
+    { value: 'bad', label: '보수/교체권장', cls: 'bad' },
+    { value: 'danger', label: '즉시조치필요', cls: 'danger' },
+  ];
+
+  container.innerHTML = statuses.map((s) => {
+    const uid = `${name}_${s.value}`;
+    const checked = currentValue === s.value ? 'checked' : '';
+    return `<div class="status-option ${s.cls}">
+      <input type="radio" name="${name}" id="${uid}" value="${s.value}" ${checked}>
+      <label for="${uid}">${s.label}</label>
+    </div>`;
+  }).join('');
+}
+
+function createStatusGroupShort(name, currentValue) {
+  const statuses = [
+    { value: 'good', label: '양호', cls: 'good' },
+    { value: 'normal', label: '경미', cls: 'normal' },
+    { value: 'bad', label: '보수', cls: 'bad' },
+    { value: 'danger', label: '즉시', cls: 'danger' },
+    { value: 'na', label: '해당없음', cls: 'na' },
+  ];
+  return statuses.map(s => {
+    const uid = `${name}_${s.value}`;
+    const checked = currentValue === s.value ? 'checked' : '';
+    return `<div class="status-option ${s.cls}">
+      <input type="radio" name="${name}" id="${uid}" value="${s.value}" ${checked}>
+      <label for="${uid}">${s.label}</label>
+    </div>`;
+  }).join('');
+}
+
+// ==========================================
+// 종합지표 라디오 그룹 초기화
+// ==========================================
+// ==========================================
+// 자동 분석 데이터
+// ==========================================
+function refreshAutoAnalysis() {
+  saveDraft(true);
+  const report = Report.load();
+  const container = document.getElementById('auto-analysis-preview');
+
+  // 1. 카테고리별 판정 현황
+  const catStats = Report.calcCategoryStats(report);
+  const statusLabels = { good: '양호', normal: '경미', bad: '보수', danger: '즉시', na: '해당없음' };
+  const statusColors = { good: '#27ae60', normal: '#e67e22', bad: '#d35400', danger: '#c0392b', na: '#7a8fa3' };
+
+  let catTableHTML = `
+    <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">카테고리별 판정 현황</div>
+    <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:16px">
+      <thead><tr style="background:rgba(255,255,255,0.05)">
+        <th style="padding:4px 8px; text-align:left; border-bottom:1px solid var(--border)">카테고리</th>
+        ${Object.entries(statusLabels).map(([k,v]) => `<th style="padding:4px 6px; text-align:center; border-bottom:1px solid var(--border); color:${statusColors[k]}">${v}</th>`).join('')}
+      </tr></thead>
+      <tbody>`;
+
+  Object.entries(catStats).forEach(([cat, s]) => {
+    const hasIssue = s.bad > 0 || s.danger > 0;
+    catTableHTML += `<tr style="${hasIssue ? 'background:rgba(192,57,43,0.06)' : ''}">
+      <td style="padding:3px 8px; border-bottom:1px solid rgba(255,255,255,0.04); font-weight:500">${s.label}</td>
+      ${['good','normal','bad','danger','na'].map(k =>
+        `<td style="padding:3px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); ${s[k] > 0 ? 'font-weight:600; color:'+statusColors[k] : 'color:var(--text-muted)'}">${s[k] || '-'}</td>`
+      ).join('')}
+    </tr>`;
+  });
+  catTableHTML += '</tbody></table>';
+
+  // 2. 전체 통계 요약
+  const stats = Report.calcStats(report);
+  const total = stats.total - stats.empty;
+  const totalHTML = `
+    <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">전체 진단 통계</div>
+    <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap">
+      <div style="padding:8px 14px; border-radius:8px; background:rgba(39,174,96,0.1); text-align:center">
+        <div style="font-size:18px; font-weight:700; color:#27ae60">${stats.good}</div>
+        <div style="font-size:10px; color:var(--text-muted)">양호</div>
+      </div>
+      <div style="padding:8px 14px; border-radius:8px; background:rgba(230,126,34,0.1); text-align:center">
+        <div style="font-size:18px; font-weight:700; color:#e67e22">${stats.normal}</div>
+        <div style="font-size:10px; color:var(--text-muted)">경미</div>
+      </div>
+      <div style="padding:8px 14px; border-radius:8px; background:rgba(211,84,0,0.1); text-align:center">
+        <div style="font-size:18px; font-weight:700; color:#d35400">${stats.bad}</div>
+        <div style="font-size:10px; color:var(--text-muted)">보수</div>
+      </div>
+      <div style="padding:8px 14px; border-radius:8px; background:rgba(192,57,43,0.1); text-align:center">
+        <div style="font-size:18px; font-weight:700; color:#c0392b">${stats.danger}</div>
+        <div style="font-size:10px; color:var(--text-muted)">즉시</div>
+      </div>
+      <div style="padding:8px 14px; border-radius:8px; background:rgba(255,255,255,0.05); text-align:center">
+        <div style="font-size:18px; font-weight:700; color:var(--text-primary)">${total}</div>
+        <div style="font-size:10px; color:var(--text-muted)">점검완료</div>
+      </div>
+    </div>`;
+
+  // 3. 내구연한 경고 항목
+  let durWarnings = [];
+  (report.durability || []).forEach(row => {
+    const rem = parseFloat(row.remaining);
+    if (!isNaN(rem) && rem <= 5) {
+      durWarnings.push({ item: row.item, remaining: rem, status: row.status });
+    }
+  });
+  let durHTML = '';
+  if (durWarnings.length > 0) {
+    durHTML = `
+      <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">내구연한 주의 항목 (잔여 5년 이하)</div>
+      <div style="margin-bottom:16px">
+        ${durWarnings.map(w => `
+          <div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:11px">
+            <span style="color:${w.remaining <= 0 ? '#c0392b' : '#e67e22'}; font-weight:600">⚠</span>
+            <span style="font-weight:500">${w.item}</span>
+            <span style="color:var(--text-muted)">잔여 ${w.remaining}년</span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  // 4. 주요 지적 항목 (보수/즉시 판정된 세부항목 목록)
+  let issueItems = [];
+  const catData = report.categoryData || {};
+  Object.entries(catData).forEach(([cat, cd]) => {
+    const catLabel = (Report.CATEGORIES[cat] || {}).label || cat;
+    const subs = cd.subStatuses || {};
+    Object.entries(subs).forEach(([name, st]) => {
+      if (st === 'bad' || st === 'danger') {
+        issueItems.push({ cat: catLabel, name, status: st });
+      }
+    });
+  });
+  let issueHTML = '';
+  if (issueItems.length > 0) {
+    issueHTML = `
+      <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">주요 지적 항목 (보수/즉시)</div>
+      <div style="margin-bottom:16px">
+        ${issueItems.map(item => `
+          <div style="display:flex; align-items:center; gap:8px; padding:3px 0; font-size:11px">
+            <span style="color:${item.status === 'danger' ? '#c0392b' : '#d35400'}; font-weight:600; font-size:9px; padding:1px 6px; border-radius:4px; background:${item.status === 'danger' ? 'rgba(192,57,43,0.1)' : 'rgba(211,84,0,0.1)'}">${item.status === 'danger' ? '즉시' : '보수'}</span>
+            <span style="color:var(--text-muted); font-size:10px">${item.cat}</span>
+            <span style="font-weight:500">${item.name}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  container.innerHTML = totalHTML + catTableHTML + durHTML + issueHTML;
+  if (!totalHTML && !catTableHTML && !durHTML && !issueHTML) {
+    container.innerHTML = '<div style="color:var(--text-muted); padding:20px; text-align:center">입력된 진단 데이터가 없습니다.</div>';
+  }
+}
+
+// ==========================================
+// 평면도 업로드/삭제
+// ==========================================
+async function uploadFloorPlan(input) {
+  const file = input.files[0];
+  if (!file) return;
+  await Report.saveImage('floorplan', file);
+  const base64 = await Report.loadImage('floorplan');
+  const preview = document.getElementById('floorplan-preview');
+  const placeholder = document.getElementById('floorplan-placeholder');
+  const removeBtn = document.getElementById('floorplan-remove-btn');
+  preview.src = base64;
+  preview.style.display = 'block';
+  placeholder.style.display = 'none';
+  removeBtn.style.display = 'block';
+}
+
+function removeFloorPlan() {
+  Report.removeImage('floorplan');
+  const preview = document.getElementById('floorplan-preview');
+  const placeholder = document.getElementById('floorplan-placeholder');
+  const removeBtn = document.getElementById('floorplan-remove-btn');
+  preview.src = '';
+  preview.style.display = 'none';
+  placeholder.style.display = '';
+  removeBtn.style.display = 'none';
+}
+
+async function loadFloorPlan() {
+  const base64 = await Report.loadImage('floorplan');
+  if (!base64) return;
+  const preview = document.getElementById('floorplan-preview');
+  const placeholder = document.getElementById('floorplan-placeholder');
+  const removeBtn = document.getElementById('floorplan-remove-btn');
+  preview.src = base64;
+  preview.style.display = 'block';
+  placeholder.style.display = 'none';
+  removeBtn.style.display = 'block';
+}
+
+// ==========================================
+// 룸 목록 관리
+// ==========================================
+const ROOM_TYPES = [
+  { value: 'living', label: '거실' },
+  { value: 'room', label: '방' },
+  { value: 'kitchen', label: '주방' },
+  { value: 'bath', label: '욕실' },
+  { value: 'balcony', label: '발코니' },
+  { value: 'entrance', label: '현관' },
+  { value: 'etc', label: '기타' },
+];
+
+function renderRoomList(rooms) {
+  const container = document.getElementById('room-list');
+  container.innerHTML = (rooms || []).map((r, i) => `
+    <div class="room-item">
+      <input type="text" class="room-name" value="${escapeAttr(r.name || '')}" placeholder="룸 이름">
+      <select class="room-type">
+        ${ROOM_TYPES.map(t => `<option value="${t.value}"${r.type === t.value ? ' selected' : ''}>${t.label}</option>`).join('')}
+      </select>
+      <button class="room-remove" onclick="removeRoom(${i})">&times;</button>
+    </div>
+  `).join('');
+}
+
+function addRoom() {
+  const container = document.getElementById('room-list');
+  const idx = container.querySelectorAll('.room-item').length;
+  const div = document.createElement('div');
+  div.className = 'room-item';
+  div.innerHTML = `
+    <input type="text" class="room-name" value="" placeholder="룸 이름">
+    <select class="room-type">
+      ${ROOM_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+    </select>
+    <button class="room-remove" onclick="removeRoom(${idx})">&times;</button>
+  `;
+  container.appendChild(div);
+}
+
+function removeRoom(idx) {
+  const items = document.querySelectorAll('#room-list .room-item');
+  if (items[idx]) items[idx].remove();
+  // 인덱스 재정렬
+  document.querySelectorAll('#room-list .room-item').forEach((item, i) => {
+    item.querySelector('.room-remove').setAttribute('onclick', `removeRoom(${i})`);
+  });
+}
+
+function collectRooms() {
+  const rooms = [];
+  document.querySelectorAll('#room-list .room-item').forEach(item => {
+    const name = item.querySelector('.room-name').value.trim();
+    const type = item.querySelector('.room-type').value;
+    if (name) rooms.push({ name, type });
+  });
+  return rooms;
+}
+
+function initIndicatorGroups(report) {
+  const ind = report.indicators || {};
+  ['gasSafety', 'electricalSafety', 'structuralSafety',
+   'equipmentPerformance', 'environmentComfort', 'insulationPerformance', 'finishPerformance'
+  ].forEach(k => {
+    const container = document.getElementById(`sg_${k}`);
+    if (container) createStatusGroup(container, `indicators_${k}`, ind[k] || '');
+  });
+
+  const ovContainer = document.getElementById('sg_overallStatus');
+  if (ovContainer) createStatusGroup(ovContainer, 'summary_overallStatus', (report.summary || {}).overallStatus || '');
+}
+
+// ==========================================
+// 준공연도/월 → 경과연수 자동계산 + 테이블 갱신
+// ==========================================
+function calcDurabilityFromYear() {
+  const yearVal = parseInt(document.getElementById('dur_buildYear').value);
+  const monthVal = parseInt(document.getElementById('dur_buildMonth').value) || 1;
+  const display = document.getElementById('dur_elapsedDisplay');
+
+  if (!yearVal || yearVal < 1900 || yearVal > 2100) {
+    display.textContent = '경과: -';
+    return;
+  }
+
+  const now = new Date();
+  const built = new Date(yearVal, monthVal - 1, 1);
+  const diffMs = now - built;
+  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+  const elapsed = Math.round(diffYears * 10) / 10; // 소수점 1자리
+
+  display.textContent = `경과: ${elapsed}년`;
+
+  // 기본정보 탭의 준공연도도 동기화
+  const basicYearEl = document.getElementById('basic_buildingYear');
+  if (basicYearEl) basicYearEl.value = yearVal;
+
+  // 내구연한 테이블의 경과연수/잔여연한 자동 채우기
+  const elapsedInt = Math.floor(diffYears);
+  const tbody = document.getElementById('durability-body');
+  if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach((tr, i) => {
+    const curInput = document.getElementById(`dur_${i}_current`);
+    const stdInput = document.getElementById(`dur_${i}_standard`);
+    const remInput = document.getElementById(`dur_${i}_remaining`);
+    if (curInput) curInput.value = elapsedInt;
+    if (stdInput && remInput) {
+      const s = parseFloat(stdInput.value) || 0;
+      if (s > 0) remInput.value = Math.max(0, s - elapsedInt);
+      else remInput.value = '';
+    }
+  });
+}
+
+// ==========================================
+// 내구연한 테이블 생성
+// ==========================================
+function renderDurabilityTable(report) {
+  const tbody = document.getElementById('durability-body');
+  tbody.innerHTML = '';
+  const elapsed = Report.calcElapsedYears(report.basic.buildingYear);
+
+  report.durability.forEach((row, i) => {
+    const stdVal = row.standard || '';
+    // 준공연도 있으면 경과연수 항상 자동계산, 없으면 저장된 값 사용
+    const curVal = (elapsed !== null) ? elapsed : (row.current || '');
+    const s = parseFloat(stdVal) || 0;
+    const c = parseFloat(curVal) || 0;
+    const remVal = (s > 0 && c > 0) ? Math.max(0, s - c) : '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600; color:var(--text-secondary)">${row.item}</td>
+      <td><input type="number" id="dur_${i}_standard" value="${stdVal}" placeholder="년"></td>
+      <td><input type="number" id="dur_${i}_current" value="${curVal}" placeholder="년"${elapsed !== null ? ' readonly style="color:var(--text-muted)"' : ''}></td>
+      <td><input type="number" id="dur_${i}_remaining" value="${remVal}" placeholder="년" style="color:var(--primary)" readonly></td>
+      <td>
+        <div class="status-group">
+          ${createStatusGroupShort(`dur_${i}_status`, row.status)}
+        </div>
+      </td>
+      <td><input type="text" id="dur_${i}_comment" value="${row.comment || ''}" placeholder="비고"></td>
+    `;
+    tbody.appendChild(tr);
+
+    const stdInput = tr.querySelector(`#dur_${i}_standard`);
+    const curInput = tr.querySelector(`#dur_${i}_current`);
+    const remInput = tr.querySelector(`#dur_${i}_remaining`);
+    function calcRemaining() {
+      const sv = parseFloat(stdInput.value) || 0;
+      const cv = parseFloat(curInput.value) || 0;
+      if (sv > 0 && cv > 0) remInput.value = Math.max(0, sv - cv);
+      else remInput.value = '';
+    }
+    stdInput.addEventListener('input', calcRemaining);
+    if (!curInput.readOnly) {
+      curInput.addEventListener('input', calcRemaining);
+    }
+  });
+}
+
+// ==========================================
+// 준공연도 변경 시 경과연수 자동 업데이트
+// ==========================================
+function onBuildingYearChange(value) {
+  const elapsed = Report.calcElapsedYears(value);
+  if (elapsed === null) return;
+  const report = Report.load();
+  report.durability.forEach((row, i) => {
+    const curInput = document.getElementById(`dur_${i}_current`);
+    if (curInput) {
+      curInput.value = elapsed;
+      curInput.readOnly = true;
+      curInput.style.color = 'var(--text-muted)';
+      const stdInput = document.getElementById(`dur_${i}_standard`);
+      const remInput = document.getElementById(`dur_${i}_remaining`);
+      if (stdInput && remInput) {
+        const s = parseFloat(stdInput.value) || 0;
+        if (s > 0) remInput.value = Math.max(0, s - elapsed);
+        else remInput.value = '';
+      }
+    }
+  });
+}
+
+// ==========================================
+// 세부진단 렌더링 (v3 — 고정 테이블 + 동적 카드)
+// ==========================================
+function renderDetailItems(report) {
+  const container = document.getElementById('detail-items-container');
+  container.innerHTML = '';
+  const CATS = Report.CATEGORIES;
+
+  Object.entries(CATS).forEach(([cat, catInfo]) => {
+    const cd = (report.categoryData || {})[cat] || { subStatuses: {}, opinion: '', fixedTables: {}, cards: [] };
+    const catCard = document.createElement('div');
+    catCard.className = 'card';
+
+    // ── 체크리스트 2열 그리드 ──
+    let subGridHTML = '';
+    if (catInfo.subItems && catInfo.subItems.length > 0) {
+      subGridHTML = `<div class="cat-sub-grid">
+        ${catInfo.subItems.map((sub, si) => `
+          <div class="cat-sub-row">
+            <span class="sub-name">${sub}</span>
+            <div class="status-group">
+              ${createStatusGroupShort(`catsub_${cat}_${si}`, cd.subStatuses[sub] || '')}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    // ── 종합의견 textarea ──
+    const opinionHTML = `
+      <div class="cat-opinion-wrap">
+        <div class="cat-opinion-label">종합의견</div>
+        <textarea id="cat_opinion_${cat}" rows="3" placeholder="${catInfo.label} 종합의견을 입력하세요.">${cd.opinion || ''}</textarea>
+      </div>
+    `;
+
+    // ── 섹션 기반 렌더링 (테이블+카드 배치) ──
+    let sectionsHTML = '';
+    if (catInfo.sections) {
+      const cardSlots = cd.cardSlots || {};
+      catInfo.sections.forEach(sec => {
+        if (sec.type === 'table') {
+          const tableDef = catInfo.fixedTables[sec.key];
+          if (tableDef) {
+            const savedRows = (cd.fixedTables || {})[sec.key] || tableDef.defaultRows;
+            sectionsHTML += renderFixedTable(cat, sec.key, tableDef, savedRows);
+          }
+        } else if (sec.type === 'cards') {
+          const slotCards = cardSlots[sec.key] || [];
+          sectionsHTML += `
+            <div class="cards-section-label">${sec.label}</div>
+            <div id="cards_${cat}_${sec.key}">
+              ${slotCards.map(card => renderCardHTML(cat + '_' + sec.key, card)).join('')}
+            </div>
+            <button class="add-card-btn" onclick="addCard('${cat}_${sec.key}')">+ 카드 추가</button>
+          `;
+        }
+      });
+    } else {
+      // 기존 방식: 고정 테이블 → 카드
+      if (catInfo.fixedTables && Object.keys(catInfo.fixedTables).length > 0) {
+        Object.entries(catInfo.fixedTables).forEach(([tableKey, tableDef]) => {
+          const savedRows = (cd.fixedTables || {})[tableKey] || tableDef.defaultRows;
+          sectionsHTML += renderFixedTable(cat, tableKey, tableDef, savedRows);
+        });
+      }
+      sectionsHTML += `
+        <div class="cards-section-label">세부 진단 카드</div>
+        <div id="cards_${cat}">
+          ${(cd.cards || []).map(card => renderCardHTML(cat, card)).join('')}
+        </div>
+        <button class="add-card-btn" onclick="addCard('${cat}')">+ 카드 추가</button>
+      `;
+    }
+
+    catCard.innerHTML = `
+      <div class="card-title">${catInfo.label} <span class="badge">${cat}</span></div>
+      ${subGridHTML}
+      ${opinionHTML}
+      ${sectionsHTML}
+    `;
+
+    container.appendChild(catCard);
+
+    // 카드별 이미지 로드
+    if (catInfo.sections) {
+      const cardSlots = cd.cardSlots || {};
+      catInfo.sections.forEach(sec => {
+        if (sec.type === 'cards') {
+          (cardSlots[sec.key] || []).forEach(card => {
+            (card.photos || []).forEach((photo, pi) => {
+              loadCardPhoto(cat + '_' + sec.key, card.id, pi, photo);
+            });
+          });
+        }
+      });
+    } else {
+      (cd.cards || []).forEach(card => {
+        (card.photos || []).forEach((photo, pi) => {
+          loadCardPhoto(cat, card.id, pi, photo);
+        });
+      });
+    }
+  });
+}
+
+// ==========================================
+// 고정 테이블 렌더링
+// ==========================================
+function renderFixedTable(cat, tableKey, tableDef, rows) {
+  const fields = getFieldsForTable(tableKey);
+
+  let theadHTML = tableDef.columns.map(col => `<th>${col}</th>`).join('');
+  if (tableDef.canAddRow) theadHTML += '<th style="width:36px"></th>';
+
+  let tbodyHTML = rows.map((row, ri) => {
+    let cellsHTML = fields.map(f => {
+      if (f.readonly) {
+        return `<td><span class="item-label">${row[f.key] || ''}</span><input type="hidden" data-field="${f.key}" value="${row[f.key] || ''}"></td>`;
+      }
+      return `<td><input type="text" data-field="${f.key}" value="${escapeAttr(row[f.key] || '')}" placeholder="${f.placeholder || ''}"></td>`;
+    }).join('');
+    if (tableDef.canAddRow) {
+      cellsHTML += `<td><button class="row-remove-btn" onclick="removeFixedTableRow('${cat}', '${tableKey}', this)" title="행 삭제">&times;</button></td>`;
+    }
+    return `<tr>${cellsHTML}</tr>`;
+  }).join('');
+
+  let actionsHTML = '';
+  if (tableDef.canAddRow) {
+    actionsHTML = `<div class="ftable-actions"><button class="btn btn-secondary btn-sm" onclick="addFixedTableRow('${cat}', '${tableKey}')">+ 행 추가</button></div>`;
+  }
+
+  return `
+    <div class="fixed-table-wrap">
+      <div class="fixed-table-title">${tableDef.title}</div>
+      <table class="measurement-table">
+        <thead><tr>${theadHTML}</tr></thead>
+        <tbody id="ftable_${cat}_${tableKey}_body">${tbodyHTML}</tbody>
+      </table>
+      ${actionsHTML}
+    </div>
+  `;
+}
+
+function getFieldsForTable(tableKey) {
+  const defs = {
+    waterQuality: [
+      { key: 'item', readonly: true },
+      { key: 'value', placeholder: '측정값' },
+      { key: 'standard', readonly: true },
+      { key: 'result', placeholder: '적합/부적합' },
+    ],
+    heavyMetal: [
+      { key: 'item', readonly: true },
+      { key: 'value', placeholder: '측정값' },
+      { key: 'standard', readonly: true },
+      { key: 'result', placeholder: '적합/부적합' },
+    ],
+    sanitation: [
+      { key: 'item', readonly: true },
+      { key: 'value', placeholder: '측정값' },
+      { key: 'standard', readonly: true },
+      { key: 'result', placeholder: '적합/부적합' },
+    ],
+    waterPressure: [
+      { key: 'location', placeholder: '장소' },
+      { key: 'value', placeholder: 'kgf/cm2' },
+    ],
+    panelSpec: [
+      { key: 'item', readonly: true },
+      { key: 'value', placeholder: '사양' },
+      { key: 'note', placeholder: '참고' },
+    ],
+    gasCheck: [
+      { key: 'location', placeholder: '장소' },
+      { key: 'point', placeholder: '측정지점' },
+      { key: 'alarm', placeholder: '경보결과' },
+    ],
+    thermalBridge: [
+      { key: 'location', placeholder: '점검장소' },
+      { key: 'refTemp', placeholder: '기준면온도' },
+      { key: 'suspectTemp', placeholder: '의심부온도' },
+      { key: 'diff', placeholder: '온도차' },
+      { key: 'description', placeholder: '점검 위치 설명' },
+    ],
+    condensation: [
+      { key: 'location', placeholder: '점검장소' },
+      { key: 'surfaceTemp', placeholder: '표면온도' },
+      { key: 'humidity', placeholder: '상대습도' },
+      { key: 'dewPoint', placeholder: '노점온도' },
+      { key: 'description', placeholder: '점검 위치 설명' },
+    ],
+    iaq: [
+      { key: 'location', placeholder: '점검장소' },
+      { key: 'radon', placeholder: '라돈' },
+      { key: 'hcho', placeholder: 'HCHO' },
+      { key: 'tvoc', placeholder: 'TVOC' },
+      { key: 'pm25', placeholder: 'PM2.5' },
+      { key: 'pm10', placeholder: 'PM10' },
+    ],
+    windowSpec: [
+      { key: 'item', readonly: true },
+      { key: 'value', placeholder: '세부내용' },
+      { key: 'note', placeholder: '참고' },
+    ],
+  };
+  return defs[tableKey] || [];
+}
+
+function addFixedTableRow(cat, tableKey) {
+  const CATS = Report.CATEGORIES;
+  const tableDef = CATS[cat].fixedTables[tableKey];
+  if (!tableDef) return;
+
+  const tbody = document.getElementById(`ftable_${cat}_${tableKey}_body`);
+  if (!tbody) return;
+
+  const fields = getFieldsForTable(tableKey);
+  const tr = document.createElement('tr');
+  let cellsHTML = fields.map(f => {
+    return `<td><input type="text" data-field="${f.key}" value="" placeholder="${f.placeholder || ''}"></td>`;
+  }).join('');
+  cellsHTML += `<td><button class="row-remove-btn" onclick="removeFixedTableRow('${cat}', '${tableKey}', this)" title="행 삭제">&times;</button></td>`;
+  tr.innerHTML = cellsHTML;
+  tbody.appendChild(tr);
+}
+
+function removeFixedTableRow(cat, tableKey, btn) {
+  const tr = btn.closest('tr');
+  const tbody = tr.parentElement;
+  if (tbody.querySelectorAll('tr').length <= 1) return; // 최소 1행 유지
+  tr.remove();
+}
+
+// ==========================================
+// 동적 카드 렌더링
+// ==========================================
+function renderCardHTML(cat, card) {
+  const cardId = card.id || Report.generateUUID();
+  const layout = card.photoLayout || '3';
+  const numSlots = parseInt(layout);
+
+  // 사진 슬롯 (각 사진별 관찰내용 포함)
+  let slotsHTML = '';
+  for (let i = 0; i < numSlots; i++) {
+    const photo = (card.photos || [])[i];
+    if (photo) {
+      slotsHTML += `
+        <div class="photo-slot has-image" id="slot_${cat}_${cardId}_${i}">
+          <img src="" alt="" id="slotimg_${cat}_${cardId}_${i}">
+          <button class="photo-remove" onclick="removeCardPhoto('${cat}', '${cardId}', ${i})">&times;</button>
+          <input type="file" accept="image/*" onchange="replaceCardPhoto('${cat}', '${cardId}', ${i}, this)">
+          <div class="photo-caption-wrap${(photo.captionTitle || photo.caption || photo.captionDetail) ? ' has-content' : ''}" oninput="this.classList.toggle('has-content', !!(this.querySelector('.photo-caption-title').value || this.querySelector('.photo-caption-detail').value))">
+            <input type="text" class="photo-caption-title" placeholder="제목" value="${escapeAttr(photo.captionTitle || photo.caption || '')}" onchange="updatePhotoCaptionField('${cat}', '${cardId}', ${i}, 'captionTitle', this.value)">
+            <textarea class="photo-caption-detail" placeholder="세부내용" onchange="updatePhotoCaptionField('${cat}', '${cardId}', ${i}, 'captionDetail', this.value)">${escapeHTML(photo.captionDetail || '')}</textarea>
+          </div>
+          <textarea class="photo-observation${photo.observation ? ' has-content' : ''}" placeholder="사진 ${i+1} 관찰내용" onchange="updatePhotoObservation('${cat}', '${cardId}', ${i}, this.value)" oninput="this.classList.toggle('has-content', !!this.value)">${escapeHTML(photo.observation || '')}</textarea>
+        </div>`;
+    } else {
+      slotsHTML += `
+        <div class="photo-slot" id="slot_${cat}_${cardId}_${i}">
+          <span class="slot-icon">+</span>
+          <span class="slot-label">사진 ${i+1}</span>
+          <input type="file" accept="image/*" onchange="uploadCardPhoto('${cat}', '${cardId}', ${i}, this)">
+        </div>`;
+    }
+  }
+
+  // 세부 판정
+  let sjHTML = '';
+  (card.subJudgments || []).forEach((sj, sji) => {
+    sjHTML += renderSubJudgmentRow(cat, cardId, sji, sj);
+  });
+
+  return `
+    <div class="field-card" data-card-id="${cardId}">
+      <div class="field-card-header">
+        <input type="text" class="card-title-input" value="${escapeAttr(card.title || '')}" placeholder="카드 제목을 입력하세요">
+        <button class="btn btn-sm" style="color:var(--status-danger);border-color:var(--status-danger)" onclick="removeCard('${cat}', '${cardId}')">삭제</button>
+      </div>
+
+      <div class="photo-layout-select">
+        <label>사진 배치:</label>
+        ${[0,1,2,3,4,6,8].map(n => `<button class="layout-btn${layout === String(n) ? ' active' : ''}" data-layout="${n}" onclick="changePhotoLayout('${cat}', '${cardId}', ${n}, this)">${n}장</button>`).join('')}
+        <label class="photo-text-toggle">
+          <input type="checkbox" ${card.hidePhotoText ? 'checked' : ''} onchange="togglePhotoText('${cat}', '${cardId}', this.checked)">
+          사진 설명 숨기기
+        </label>
+      </div>
+
+      <div class="photo-slots${card.hidePhotoText ? ' hide-text' : ''}" data-layout="${layout}">
+        ${slotsHTML}
+      </div>
+
+      <div class="sub-judgments">
+        <div class="sub-judgments-header">
+          <span>세부 판정</span>
+          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 8px" onclick="addSubJudgment('${cat}', '${cardId}')">+ 판정 추가</button>
+        </div>
+        <div class="sj-list" id="sjlist_${cat}_${cardId}">
+          ${sjHTML}
+        </div>
+      </div>
+
+      <div class="field-label">현장노트</div>
+      <textarea class="card-fieldnote" rows="3" placeholder="현장노트를 입력하세요">${escapeHTML(card.fieldNote || '')}</textarea>
+    </div>
+  `;
+}
+
+function renderSubJudgmentRow(cat, cardId, sji, sj) {
+  const sjName = `sj_${cat}_${cardId}_${sji}`;
+  return `
+    <div class="sub-judgment-row">
+      <input type="text" class="sj-name" value="${escapeAttr((sj && sj.name) || '')}" placeholder="항목명">
+      <div class="status-group">
+        ${createStatusGroupShort(sjName, (sj && sj.status) || '')}
+      </div>
+      <button class="sj-remove" onclick="removeSubJudgment(this)">&times;</button>
+    </div>
+  `;
+}
+
+function escapeAttr(str) {
+  return String(str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHTML(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ==========================================
+// 카드 동작
+// ==========================================
+function addCard(cat) {
+  const cardsContainer = document.getElementById(`cards_${cat}`);
+  if (!cardsContainer) return;
+
+  const newCard = {
+    id: Report.generateUUID(),
+    title: '',
+    photoLayout: '3',
+    photos: [],
+    subJudgments: [],
+    observation: '',
+    fieldNote: '',
+  };
+
+  const div = document.createElement('div');
+  div.innerHTML = renderCardHTML(cat, newCard);
+  cardsContainer.appendChild(div.firstElementChild);
+}
+
+function removeCard(cat, cardId) {
+  if (!confirm('이 카드를 삭제하시겠습니까?')) return;
+  const cardEl = document.querySelector(`.field-card[data-card-id="${cardId}"]`);
+  if (cardEl) {
+    // 이미지도 IndexedDB에서 삭제
+    const report = Report.load();
+    // cat이 복합키(D_electric 등)인 경우 분리
+    const parts = cat.split('_');
+    const baseCat = parts[0];
+    const slotKey = parts.length > 1 ? parts.slice(1).join('_') : null;
+    const cd = (report.categoryData || {})[baseCat];
+    if (cd) {
+      let cards;
+      if (slotKey && cd.cardSlots) {
+        cards = cd.cardSlots[slotKey];
+      } else {
+        cards = cd.cards;
+      }
+      if (cards) {
+        const card = cards.find(c => c.id === cardId);
+        if (card && card.photos) {
+          card.photos.forEach(p => { if (p && p.id) Report.removeImage(p.id); });
+        }
+      }
+    }
+    cardEl.remove();
+  }
+}
+
+function changePhotoLayout(cat, cardId, num, btn) {
+  const cardEl = document.querySelector(`.field-card[data-card-id="${cardId}"]`);
+  if (!cardEl) return;
+
+  // 현재 카드 데이터 수집 (폼 수집 전이므로 DOM에서 직접)
+  cardEl.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const slotsContainer = cardEl.querySelector('.photo-slots');
+  slotsContainer.dataset.layout = num;
+
+  // 기존 사진 정보 보존
+  const existingSlots = slotsContainer.querySelectorAll('.photo-slot');
+  const currentCount = existingSlots.length;
+
+  if (num > currentCount) {
+    // 슬롯 추가
+    for (let i = currentCount; i < num; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'photo-slot';
+      slot.id = `slot_${cat}_${cardId}_${i}`;
+      slot.innerHTML = `
+        <span class="slot-icon">+</span>
+        <span class="slot-label">사진 ${i+1}</span>
+        <input type="file" accept="image/*" onchange="uploadCardPhoto('${cat}', '${cardId}', ${i}, this)">
+      `;
+      slotsContainer.appendChild(slot);
+    }
+  } else if (num < currentCount) {
+    // 초과 슬롯 제거
+    for (let i = currentCount - 1; i >= num; i--) {
+      const slot = existingSlots[i];
+      if (slot) {
+        // 이미지가 있으면 IndexedDB에서 삭제
+        const imgId = `${cat}_${cardId}_${i}`;
+        Report.removeImage(imgId);
+        slot.remove();
+      }
+    }
+  }
+}
+
+function togglePhotoText(cat, cardId, hide) {
+  const cardEl = document.querySelector(`.field-card[data-card-id="${cardId}"]`);
+  if (!cardEl) return;
+  const slotsContainer = cardEl.querySelector('.photo-slots');
+  if (hide) {
+    slotsContainer.classList.add('hide-text');
+  } else {
+    slotsContainer.classList.remove('hide-text');
+  }
+}
+
+// ==========================================
+// 사진 업로드/관리
+// ==========================================
+async function uploadCardPhoto(cat, cardId, slotIndex, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const imgId = `${cat}_${cardId}_${slotIndex}`;
+  await Report.saveImage(imgId, file);
+
+  const slot = document.getElementById(`slot_${cat}_${cardId}_${slotIndex}`);
+  if (!slot) return;
+
+  const base64 = await Report.loadImage(imgId);
+  slot.className = 'photo-slot has-image';
+  slot.innerHTML = `
+    <img src="${base64}" alt="${file.name}" id="slotimg_${cat}_${cardId}_${slotIndex}">
+    <button class="photo-remove" onclick="removeCardPhoto('${cat}', '${cardId}', ${slotIndex})">&times;</button>
+    <input type="file" accept="image/*" onchange="replaceCardPhoto('${cat}', '${cardId}', ${slotIndex}, this)">
+    <div class="photo-caption-wrap" oninput="this.classList.toggle('has-content', !!(this.querySelector('.photo-caption-title').value || this.querySelector('.photo-caption-detail').value))">
+      <input type="text" class="photo-caption-title" placeholder="제목" value="" onchange="updatePhotoCaptionField('${cat}', '${cardId}', ${slotIndex}, 'captionTitle', this.value)">
+      <textarea class="photo-caption-detail" placeholder="세부내용" onchange="updatePhotoCaptionField('${cat}', '${cardId}', ${slotIndex}, 'captionDetail', this.value)"></textarea>
+    </div>
+    <textarea class="photo-observation" placeholder="사진 ${slotIndex+1} 관찰내용" onchange="updatePhotoObservation('${cat}', '${cardId}', ${slotIndex}, this.value)" oninput="this.classList.toggle('has-content', !!this.value)"></textarea>
+  `;
+
+  // 데이터에 사진 정보 기록
+  updateCardPhotoData(cat, cardId, slotIndex, { id: imgId, name: file.name, observation: '', captionTitle: '', captionDetail: '' });
+}
+
+async function replaceCardPhoto(cat, cardId, slotIndex, input) {
+  const file = input.files[0];
+  if (!file) return;
+  // 기존 이미지 삭제 후 새로 업로드
+  const imgId = `${cat}_${cardId}_${slotIndex}`;
+  await Report.removeImage(imgId);
+  await Report.saveImage(imgId, file);
+
+  const base64 = await Report.loadImage(imgId);
+  const imgEl = document.getElementById(`slotimg_${cat}_${cardId}_${slotIndex}`);
+  if (imgEl) imgEl.src = base64;
+
+  // 기존 관찰내용·설명 유지
+  const report = Report.load();
+  const cards = findCardList(report, cat);
+  const card = cards.find(c => c.id === cardId);
+  const existingObs = card && card.photos && card.photos[slotIndex] ? card.photos[slotIndex].observation || '' : '';
+  const p = card && card.photos && card.photos[slotIndex] ? card.photos[slotIndex] : {};
+  updateCardPhotoData(cat, cardId, slotIndex, { id: imgId, name: file.name, observation: existingObs, captionTitle: p.captionTitle || '', captionDetail: p.captionDetail || '' });
+}
+
+function removeCardPhoto(cat, cardId, slotIndex) {
+  const imgId = `${cat}_${cardId}_${slotIndex}`;
+  Report.removeImage(imgId);
+
+  const slot = document.getElementById(`slot_${cat}_${cardId}_${slotIndex}`);
+  if (!slot) return;
+
+  slot.className = 'photo-slot';
+  slot.innerHTML = `
+    <span class="slot-icon">+</span>
+    <span class="slot-label">사진 ${slotIndex+1}</span>
+    <input type="file" accept="image/*" onchange="uploadCardPhoto('${cat}', '${cardId}', ${slotIndex}, this)">
+  `;
+
+  updateCardPhotoData(cat, cardId, slotIndex, null);
+}
+
+// 복합 키(D_electric 등) 지원 헬퍼: 카드 배열 찾기
+function findCardList(report, cat) {
+  const parts = cat.split('_');
+  const baseCat = parts[0];
+  const slotKey = parts.length > 1 ? parts.slice(1).join('_') : null;
+  if (!report.categoryData) report.categoryData = {};
+  if (!report.categoryData[baseCat]) report.categoryData[baseCat] = { subStatuses: {}, opinion: '', fixedTables: {}, cards: [], cardSlots: {} };
+  const cd = report.categoryData[baseCat];
+  if (slotKey) {
+    if (!cd.cardSlots) cd.cardSlots = {};
+    if (!cd.cardSlots[slotKey]) cd.cardSlots[slotKey] = [];
+    return cd.cardSlots[slotKey];
+  }
+  if (!cd.cards) cd.cards = [];
+  return cd.cards;
+}
+
+function updatePhotoCaptionField(cat, cardId, slotIndex, field, value) {
+  const report = Report.load();
+  const cards = findCardList(report, cat);
+  const card = cards.find(c => c.id === cardId);
+  if (!card || !card.photos || !card.photos[slotIndex]) return;
+  card.photos[slotIndex][field] = value;
+  Report.save(report);
+}
+
+function updatePhotoObservation(cat, cardId, slotIndex, text) {
+  const report = Report.load();
+  const cards = findCardList(report, cat);
+  const card = cards.find(c => c.id === cardId);
+  if (!card || !card.photos) return;
+  if (!card.photos[slotIndex]) card.photos[slotIndex] = {};
+  card.photos[slotIndex].observation = text;
+  Report.save(report);
+}
+
+function updateCardPhotoData(cat, cardId, slotIndex, photoData) {
+  const report = Report.load();
+  const cards = findCardList(report, cat);
+
+  let card = cards.find(c => c.id === cardId);
+  if (!card) {
+    card = { id: cardId, title: '', photoLayout: '3', photos: [], subJudgments: [], observation: '', fieldNote: '' };
+    cards.push(card);
+  }
+  if (!card.photos) card.photos = [];
+
+  if (photoData === null) {
+    card.photos[slotIndex] = null;
+  } else {
+    card.photos[slotIndex] = photoData;
+  }
+
+  Report.save(report);
+}
+
+async function loadCardPhoto(cat, cardId, slotIndex, photo) {
+  if (!photo || !photo.id) return;
+  const base64 = await Report.loadImage(photo.id);
+  if (!base64) return;
+
+  const imgEl = document.getElementById(`slotimg_${cat}_${cardId}_${slotIndex}`);
+  if (imgEl) imgEl.src = base64;
+}
+
+// ==========================================
+// 세부 판정 동작
+// ==========================================
+function addSubJudgment(cat, cardId) {
+  const list = document.getElementById(`sjlist_${cat}_${cardId}`);
+  if (!list) return;
+  const sji = list.querySelectorAll('.sub-judgment-row').length;
+  const div = document.createElement('div');
+  div.innerHTML = renderSubJudgmentRow(cat, cardId, sji, { name: '', status: '' });
+  list.appendChild(div.firstElementChild);
+}
+
+function removeSubJudgment(btn) {
+  const row = btn.closest('.sub-judgment-row');
+  if (row) row.remove();
+}
+
+// ==========================================
+// 비용 자동합산
+// ==========================================
+function calcRepairCostTotal() {
+  const costIds = ['heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'plumbingCost'];
+  let totalMin = 0, totalMax = 0, hasAny = false;
+
+  costIds.forEach(id => {
+    const val = (document.getElementById('indicators_' + id) || {}).value || '';
+    // "200~500만원", "200~500", "200", "200만원" 등 파싱
+    const nums = val.replace(/[^0-9~\-\.]/g, '').split(/[~\-]/).map(s => parseFloat(s)).filter(n => !isNaN(n));
+    if (nums.length >= 2) {
+      totalMin += nums[0];
+      totalMax += nums[1];
+      hasAny = true;
+    } else if (nums.length === 1) {
+      totalMin += nums[0];
+      totalMax += nums[0];
+      hasAny = true;
+    }
+  });
+
+  const minEl = document.getElementById('indicators_repairCostMin');
+  const maxEl = document.getElementById('indicators_repairCostMax');
+  if (minEl) minEl.value = hasAny ? totalMin : '';
+  if (maxEl) maxEl.value = hasAny ? totalMax : '';
+}
+
+// ==========================================
+// 진행률 업데이트
+// ==========================================
+function updateProgressBar() {
+  const report = Report.load();
+  const stats = Report.calcStats(report);
+  const bar = document.getElementById('stats-bar');
+  if (!bar) return;
+
+  bar.innerHTML = `
+    <div class="progress-card"><div class="progress-count good">${stats.good}</div><div class="progress-label">특이사항없음</div></div>
+    <div class="progress-card"><div class="progress-count normal">${stats.normal}</div><div class="progress-label">경미/관리</div></div>
+    <div class="progress-card"><div class="progress-count bad">${stats.bad}</div><div class="progress-label">보수/교체</div></div>
+    <div class="progress-card"><div class="progress-count danger">${stats.danger}</div><div class="progress-label">즉시조치</div></div>
+    <div class="progress-card" style="flex:2">
+      <div class="progress-count total">${stats.progress}%</div>
+      <div class="progress-label">입력완료</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${stats.progress}%"></div></div>
+    </div>
+  `;
+  const pt = document.getElementById('progress-text');
+  if (pt) pt.textContent = `입력 ${stats.progress}%`;
+}
+
+// ==========================================
+// 저장 액션
+// ==========================================
+function saveDraft(silent) {
+  const data = Report.collectForm();
+  if (Report.save(data)) {
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const indicator = document.getElementById('autosave-indicator');
+    if (indicator) {
+      indicator.textContent = `저장됨 ${timeStr}`;
+      indicator.style.opacity = '1';
+      indicator.style.color = 'var(--status-good)';
+      setTimeout(() => {
+        indicator.style.opacity = '0.5';
+        indicator.style.color = 'var(--text-muted)';
+      }, 3000);
+    }
+    const btn = document.getElementById('save-btn');
+    if (btn && !silent) {
+      btn.style.borderColor = 'var(--status-good)';
+      btn.style.color = 'var(--status-good)';
+      setTimeout(() => {
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 1500);
+    }
+    if (!silent) Report.showToast('임시저장 완료', 'success');
+    updateProgressBar();
+  } else {
+    Report.showToast('저장에 실패했습니다', 'error');
+  }
+}
+
+function saveAndPreview() {
+  const data = Report.collectForm();
+  Report.save(data);
+  window.location.href = 'preview.html';
+}
+
+function confirmClear() {
+  if (confirm('모든 입력 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+    Report.clear();
+    location.reload();
+  }
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  Report.importJSON(file).then(() => {
+    Report.showToast('데이터를 불러왔습니다', 'success');
+    location.reload();
+  }).catch(() => {
+    Report.showToast('파일을 읽을 수 없습니다', 'error');
+  });
+}
+
+// ==========================================
+// 초기화
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  Report.migrateV1();
+
+  if (!Report.getActiveReportId()) {
+    Report.createNew();
+  }
+
+  const report = Report.load();
+
+  Report.fillForm(report);
+  initIndicatorGroups(report);
+  renderDurabilityTable(report);
+  renderDetailItems(report);
+  updateProgressBar();
+
+  // 평면도 로드
+  loadFloorPlan();
+
+  // 내구연한 탭: 기본정보 준공연도/월 동기화 + 자동계산
+  const byVal = report.basic.buildingYear || '';
+  const bmVal = report.basic.buildingMonth || '';
+  if (byVal) {
+    document.getElementById('dur_buildYear').value = byVal;
+    if (bmVal) document.getElementById('dur_buildMonth').value = bmVal;
+    calcDurabilityFromYear();
+  }
+
+  // 자동저장 (30초마다 조용히 저장)
+  setInterval(() => saveDraft(true), 30000);
+
+  // Ctrl+S 단축키
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      saveDraft();
+    }
+  });
+
+  // 변경 감지 -> 진행률 업데이트
+  document.addEventListener('change', () => {
+    setTimeout(updateProgressBar, 100);
+  });
+
+  // 비용 필드 자동합산
+  ['heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'plumbingCost'].forEach(id => {
+    const el = document.getElementById('indicators_' + id);
+    if (el) el.addEventListener('input', calcRepairCostTotal);
+  });
+  calcRepairCostTotal();
+
+  // 페이지 떠나기 전 자동저장
+  window.addEventListener('beforeunload', () => {
+    saveDraft(true);
+  });
+});
+</script>
+</body>
+</html>

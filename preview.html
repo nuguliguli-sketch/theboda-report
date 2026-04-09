@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보고서 미리보기 - 더보다 AI</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/print.css">
+  <style>
+    /* -- 미리보기 전용 스타일 -- */
+    .preview-wrap {
+      background: #111827;
+      min-height: 100vh;
+      padding: 32px 0;
+    }
+
+    .report-viewer {
+      max-width: 220mm;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* 각 페이지 카드 (A4 기본) */
+    .report-page {
+      background: #fff;
+      color: #0a1628;
+      width: 210mm;
+      min-height: 297mm;
+      border-radius: 4px;
+      margin: 0 auto 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      padding: 20mm 18mm;
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    /* 페이지 번호 표시 */
+    .page-label {
+      position: absolute;
+      top: -26px;
+      left: 0;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      font-weight: 600;
+    }
+
+    /* -- 보고서 내부 스타일 (라이트) -- */
+    .rpt-body {
+      font-family: 'Pretendard Variable', 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      font-size: 10.5pt;
+      color: #0a1628;
+      line-height: 1.6;
+    }
+
+    /* 커버 (2분할 레이아웃 - 기존 보고서 참고) */
+    .cover-page {
+      background: #ffffff !important;
+      color: #0a1628;
+      display: flex;
+      flex-direction: row;
+      padding: 0 !important;
+      overflow: hidden;
+    }
+    .cover-left {
+      flex: 6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 48px 40px;
+      position: relative;
+    }
+    .cover-right {
+      flex: 4;
+      background: #1a3669;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      position: relative;
+    }
+    .cover-right-logo {
+      height: 32px;
+      margin-bottom: auto;
+    }
+    .cover-right-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: auto;
+    }
+    .cover-right-circle img {
+      height: 60px;
+      opacity: 0.9;
+    }
+    .cover-right-footer {
+      font-size: 9px;
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+    }
+    .cover-doc-label {
+      font-size: 11px;
+      color: #4a90d9;
+      letter-spacing: 0.12em;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .cover-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a3669;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .cover-address {
+      font-size: 14px;
+      color: #4a6a8a;
+      font-weight: 500;
+      margin-bottom: 48px;
+      line-height: 1.5;
+    }
+    .cover-info-table {
+      width: 100%;
+      max-width: 340px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .cover-info-table td {
+      padding: 7px 0;
+      border-bottom: 1px solid #e8eef6;
+    }
+    .cover-info-table td:first-child {
+      color: #4a6a8a;
+      width: 90px;
+      font-size: 11px;
+    }
+    .cover-info-table td:last-child {
+      font-weight: 600;
+      color: #0a1628;
+    }
+    .cover-info-table tr:last-child td { border-bottom: none; }
+    .cover-footer {
+      position: absolute;
+      bottom: 24px;
+      left: 48px;
+      font-size: 9px;
+      color: #aab8c2;
+    }
+
+    /* 간지 (섹션 구분 페이지) */
+    .divider-page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: #fff !important;
+    }
+    .divider-line { width: 40px; height: 3px; background: #4a90d9; margin-bottom: 24px; border-radius: 2px; }
+    .divider-num { font-size: 13px; font-weight: 700; color: #4a90d9; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .divider-title { font-size: 22px; font-weight: 700; color: #1a3669; margin-bottom: 6px; }
+    .divider-sub { font-size: 11px; color: #4a6a8a; }
+
+    /* 판정 기준 테이블 */
+    .criteria-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 16px; }
+    .criteria-table th { background: #f4f7fb; padding: 6px 10px; text-align: left; font-weight: 600; color: #0a1628; border-bottom: 2px solid #d8e2ec; }
+    .criteria-table td { padding: 5px 10px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+    .criteria-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 9px; font-weight: 700; }
+
+    /* 각 페이지 헤더 */
+    .rpt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2.5px solid #4a90d9;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .rpt-header-brand {
+      font-size: 11px;
+      font-weight: 700;
+      color: #4a90d9;
+    }
+
+    .rpt-header-info {
+      font-size: 10px;
+      color: #4a6a8a;
+    }
+
+    .rpt-page-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0a1628;
+      margin-bottom: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .rpt-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #4a90d9;
+      margin-bottom: 10px;
+      margin-top: 18px;
+      padding-left: 10px;
+      border-left: 3px solid #4a90d9;
+    }
+
+    /* 정보 테이블 */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+
+    .info-table th {
+      background: #4a90d9;
+      color: #fff;
+      font-weight: 600;
+      padding: 7px 10px;
+      text-align: left;
+      font-size: 9.5px;
+    }
+
+    .info-table td {
+      padding: 7px 10px;
+      border: 1px solid #d8e2ec;
+      font-size: 10px;
+    }
+
+    .info-table tr:nth-child(even) td { background: #f4f7fb; }
+    .info-table .label-cell { background: #f4f7fb; font-weight: 600; color: #4a6a8a; width: 120px; }
+
+    /* 상태 뱃지 */
+    .pb { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+    .pb.good   { background: #f0fff4; color: #27ae60; }
+    .pb.normal { background: #fff8e1; color: #e67e22; }
+    .pb.bad    { background: #fff8e1; color: #d35400; }
+    .pb.danger { background: #fff0f0; color: #c0392b; }
+    .pb.na     { background: #f4f7fb; color: #4a6a8a; }
+    .pb.none   { background: #f4f7fb; color: #4a6a8a; }
+
+    /* 지표 그리드 */
+    .indicator-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .indicator-card {
+      border: 1px solid #d8e2ec;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .indicator-label { font-size: 9px; color: #4a6a8a; margin-bottom: 4px; }
+    .indicator-value { font-size: 11px; font-weight: 700; }
+
+    /* 내구연한 테이블 */
+    .dur-table-print {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+    }
+
+    .dur-table-print th {
+      background: #4a90d9;
+      color: #fff;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 9px;
+    }
+
+    .dur-table-print td {
+      padding: 6px 8px;
+      border: 1px solid #d8e2ec;
+      text-align: center;
+    }
+
+    .dur-table-print tr:nth-child(even) td { background: #f4f7fb; }
+    .dur-table-print .item-name { text-align: left; font-weight: 600; }
+
+    /* 체크리스트 테이블 */
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      margin-bottom: 12px;
+    }
+    .checklist-table th {
+      background: #f4f7fb;
+      color: #4a6a8a;
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 9px;
+      border-bottom: 1px solid #d8e2ec;
+    }
+    .checklist-table td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 9.5px;
+    }
+    .checklist-table .sub-name { font-weight: 600; color: #0a1628; }
+
+    /* 측정 테이블 (미리보기용) */
+    .meas-table-print {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      margin-bottom: 12px;
+    }
+    .meas-table-print th {
+      background: #4a90d9;
+      color: #fff;
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 9px;
+    }
+    .meas-table-print td {
+      padding: 5px 8px;
+      border: 1px solid #d8e2ec;
+      font-size: 9.5px;
+    }
+    .meas-table-print tr:nth-child(even) td { background: #f4f7fb; }
+    .meas-table-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #4a90d9;
+      margin: 12px 0 6px;
+      padding-left: 8px;
+      border-left: 2px solid #4a90d9;
+    }
+
+    /* 세부진단 카드 */
+    .diag-card {
+      border: 1px solid #d8e2ec;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .diag-card-header {
+      background: #f4f7fb;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #d8e2ec;
+    }
+
+    .diag-card-title { font-size: 10.5px; font-weight: 700; color: #0a1628; }
+
+    .diag-card-body { padding: 10px 12px; }
+
+    .diag-label { font-size: 9px; color: #4a6a8a; font-weight: 600; margin-bottom: 2px; }
+    .diag-text { font-size: 10px; color: #4a6a8a; margin-bottom: 8px; white-space: pre-wrap; line-height: 1.6; }
+
+    /* 사진 */
+    .photo-grid {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+    .photo-grid[data-cols="1"] { grid-template-columns: 1fr; }
+    .photo-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+    .photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
+    .photo-grid[data-cols="6"] { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr; }
+
+    .photo-cell img {
+      width: 100%;
+      border-radius: 4px;
+      border: 1px solid #d8e2ec;
+      display: block;
+    }
+
+    .photo-cell-caption {
+      font-size: 8px;
+      color: #4a6a8a;
+      text-align: center;
+      margin-top: 2px;
+      background: #f4f7fb;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+
+    /* 세부 판정 */
+    .sj-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+      margin-bottom: 8px;
+    }
+    .sj-table th {
+      background: #f4f7fb;
+      padding: 4px 8px;
+      text-align: left;
+      color: #4a6a8a;
+      font-size: 8.5px;
+    }
+    .sj-table td {
+      padding: 4px 8px;
+      border-bottom: 1px solid #f0f2f5;
+    }
+
+    /* 전문가 의견 */
+    .expert-box {
+      border: 1px solid #d8e2ec;
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .expert-box-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #4a90d9;
+      margin-bottom: 6px;
+    }
+
+    .expert-box-text {
+      font-size: 10px;
+      color: #4a6a8a;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    /* 종합판단 요약 */
+    .summary-overall {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid #d8e2ec;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      background: #f4f7fb;
+    }
+
+    .overall-label { font-size: 11px; font-weight: 700; color: #0a1628; }
+
+    .priority-list {
+      border: 1px solid #d8e2ec;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .priority-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 12px;
+      font-size: 10px;
+      border-bottom: 1px solid #f4f7fb;
+    }
+
+    .priority-item:last-child { border-bottom: none; }
+    .priority-num { font-weight: 700; color: #4a90d9; min-width: 20px; }
+
+    /* 페이지 풋터 */
+    .rpt-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #d8e2ec;
+      padding-top: 8px;
+      margin-top: 20px;
+      font-size: 9px;
+      color: #4a6a8a;
+    }
+
+    /* 없음 표시 */
+    .empty-text {
+      font-size: 10px;
+      color: #aab8c2;
+      font-style: italic;
+    }
+
+    /* -- 상단 컨트롤 바 (웹전용) -- */
+    .preview-controls {
+      background: rgba(10,22,40,0.95);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .preview-controls-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .preview-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .preview-back:hover { color: var(--text-primary); }
+
+    .preview-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .print-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- -- 상단 컨트롤 (인쇄시 숨겨짐) -- -->
+<div class="preview-controls no-print">
+  <div class="preview-controls-left">
+    <a href="index.html" class="preview-back">
+      &larr; 입력으로
+    </a>
+    <div class="preview-title" id="ctrl-title">보고서 미리보기</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px">
+    <span class="print-hint">Ctrl+P 또는 아래 버튼으로 출력</span>
+    <button class="btn btn-secondary btn-sm" onclick="window.print()">인쇄 / PDF 저장</button>
+    <a href="index.html" class="btn btn-ghost btn-sm">수정하기</a>
+  </div>
+</div>
+
+<!-- -- 보고서 뷰어 -- -->
+<div class="preview-wrap" id="preview-wrap">
+  <div class="report-viewer" id="report-viewer">
+    <!-- JS로 렌더링 -->
+  </div>
+</div>
+
+<script src="assets/report.js"></script>
+<script src="assets/criteria-data.js"></script>
+<script>
+// ==========================================
+// 헬퍼
+// ==========================================
+function pb(status) {
+  if (!status) return '<span class="pb none">미입력</span>';
+  const map = {
+    good: '특이사항없음', normal: '경미/관리필요', bad: '보수/교체권장', danger: '즉시조치필요',
+    na: '해당없음',
+    low: '낮음', medium: '보통', high: '높음', very_high: '매우높음'
+  };
+  return `<span class="pb ${Report.statusClass(status)}">${map[status] || status}</span>`;
+}
+
+function val(v, fallback = '-') {
+  return v && String(v).trim() ? v : fallback;
+}
+
+function pageWrap(num, content) {
+  return `
+    <div class="report-page rpt-body" style="position:relative">
+      <span class="page-label no-print">Page ${num}</span>
+      ${content}
+    </div>
+  `;
+}
+
+function pageFooter(report, pageNum) {
+  return `
+    <div class="rpt-footer">
+      <span>더보다 AI - 주택 진단 보고서</span>
+      <span>${val(report.basic.address, '주소 미입력')}</span>
+      <span>${pageNum}</span>
+    </div>
+  `;
+}
+
+function pageHeader(report, pageTitle) {
+  return `
+    <div class="rpt-header">
+      <span class="rpt-header-brand">더보다 AI 주택진단보고서</span>
+      <span class="rpt-header-info">${val(report.basic.address, '')} | ${val(report.basic.inspectionDate, '')}</span>
+    </div>
+    <div class="rpt-page-title">${pageTitle}</div>
+  `;
+}
+
+function escapeHTML(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ==========================================
+// 고정 테이블 렌더링 (미리보기용)
+// ==========================================
+function renderFixedTablePreview(tableKey, tableDef, rows) {
+  if (!rows || rows.length === 0) return '';
+  // 모든 값이 비어있으면 렌더링 안함
+  const hasData = rows.some(row => Object.values(row).some(v => v && String(v).trim()));
+  if (!hasData) return '';
+
+  let theadHTML = tableDef.columns.map(col => `<th>${col}</th>`).join('');
+  let tbodyHTML = rows.map(row => {
+    const vals = Object.values(row);
+    return `<tr>${vals.map(v => `<td>${val(v, '')}</td>`).join('')}</tr>`;
+  }).join('');
+
+  return `
+    <div class="meas-table-title">${tableDef.title}</div>
+    <table class="meas-table-print">
+      <thead><tr>${theadHTML}</tr></thead>
+      <tbody>${tbodyHTML}</tbody>
+    </table>
+  `;
+}
+
+// ==========================================
+// 보고서 렌더러
+// ==========================================
+async function renderReport() {
+  const report = Report.load();
+  const viewer = document.getElementById('report-viewer');
+  const CATS = Report.CATEGORIES;
+
+  const ctrlTitle = document.getElementById('ctrl-title');
+  if (ctrlTitle && report.basic.address) {
+    ctrlTitle.textContent = report.basic.address;
+  }
+
+  let pages = [];
+  let pageNum = 1;
+
+  // ── Page 1: 표지 (2분할 레이아웃) ──
+  pages.push(`
+    <div class="report-page cover-page">
+      <span class="page-label no-print">표지</span>
+      <div class="cover-left">
+        <div class="cover-doc-label">BUILDING INSPECTION REPORT</div>
+        <div class="cover-title">주택 진단 보고서</div>
+        <div class="cover-address">${val(report.basic.address, '')}<br>${val(report.basic.unit, '')}</div>
+        <table class="cover-info-table">
+          <tr><td>진단일자</td><td>${val(report.basic.inspectionDate, '-')}</td></tr>
+          <tr><td>의뢰인</td><td>${val(report.basic.clientName, '-')}</td></tr>
+          <tr><td>진단자</td><td>${val(report.basic.inspectorName, '-')}</td></tr>
+          <tr><td>보고서 번호</td><td>${val(report.basic.reportNo, '-')}</td></tr>
+          <tr><td>작성일</td><td>${val(report.basic.reportDate, '-')}</td></tr>
+        </table>
+        <div class="cover-footer">더보다 AI (home.theboda.io)</div>
+      </div>
+      <div class="cover-right">
+        <img src="assets/ci-logo-light.png" alt="더보다" class="cover-right-logo">
+        <div class="cover-right-circle">
+          <img src="assets/ci-logo-light.png" alt="">
+        </div>
+        <div class="cover-right-footer">Building Inspection</div>
+      </div>
+    </div>
+  `);
+  pageNum++;
+
+  // ── 간지: 점검개요 ──
+  pages.push(`
+    <div class="report-page divider-page">
+      <span class="page-label no-print">간지</span>
+      <div class="divider-line"></div>
+      <div class="divider-num">PART 01</div>
+      <div class="divider-title">점검개요 및 세대정보</div>
+      <div class="divider-sub">Basic Information & Property Overview</div>
+    </div>
+  `);
+
+  // ── Page 2: 세대 기본정보 ──
+  const b = report.basic;
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '점검개요 / 세대정보 및 주요이슈')}
+    <div class="rpt-section-title">세대 상세정보</div>
+    <table class="info-table">
+      <tr>
+        <td class="label-cell">점검대상 주소</td>
+        <td colspan="3">${val(b.address)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">호수</td><td>${val(b.unit)}</td>
+        <td class="label-cell">준공연도</td><td>${val(b.buildingYear)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">전용면적</td><td>${val(b.area)} m2</td>
+        <td class="label-cell">공급면적</td><td>${val(b.supplyArea)} m2</td>
+      </tr>
+      <tr>
+        <td class="label-cell">난방방식</td><td>${val(b.heatingType)}</td>
+        <td class="label-cell">확장여부</td><td>${val(b.extensionStatus)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">구조</td><td>${val(b.structure)}</td>
+        <td class="label-cell">용도</td><td>${val(b.usage)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">총층수</td><td>${val(b.floorTotal)}</td>
+        <td class="label-cell">해당층</td><td>${val(b.floorUnit)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">현재 거주상태</td><td colspan="3">${val(b.currentOccupancy)}</td>
+      </tr>
+    </table>
+    ${b.managementIssues ? `
+      <div class="rpt-section-title">단지관리 이슈</div>
+      <div style="font-size:10px; color:#4a6a8a; line-height:1.7; white-space:pre-wrap">${escapeHTML(b.managementIssues)}</div>
+    ` : ''}
+    <div class="rpt-section-title">평면도</div>
+    <div id="preview-floorplan" style="min-height:80px; background:#f4f7fb; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px">
+      <span style="font-size:9px; color:#aab8c2">평면도 로딩중...</span>
+    </div>
+    <table class="info-table" style="margin-top:16px">
+      <tr>
+        <td class="label-cell">진단일자</td><td>${val(b.inspectionDate)}</td>
+        <td class="label-cell">진단자명</td><td>${val(b.inspectorName)}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">의뢰인</td><td>${val(b.clientName)}</td>
+        <td class="label-cell">보고서 번호</td><td>${val(b.reportNo)}</td>
+      </tr>
+    </table>
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── 간지: 종합지표 ──
+  pages.push(`
+    <div class="report-page divider-page">
+      <span class="page-label no-print">간지</span>
+      <div class="divider-line"></div>
+      <div class="divider-num">PART 02</div>
+      <div class="divider-title">종합 진단 지표</div>
+      <div class="divider-sub">Inspection Summary & Risk Analysis</div>
+    </div>
+  `);
+
+  // ── Page: 판정 기준 안내 ──
+  pageNum++;
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '판정 기준 안내')}
+    <div style="font-size:10px; color:#4a6a8a; line-height:1.6; margin-bottom:14px">
+      본 보고서에서 사용되는 판정 등급의 기준입니다. 각 항목은 아래 기준에 따라 현장 육안 점검 및 장비 측정 결과를 종합하여 판정합니다.
+    </div>
+    <table class="criteria-table">
+      <thead><tr><th style="width:100px">판정</th><th>기준 설명</th><th style="width:180px">조치 수준</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="criteria-badge" style="background:#f0fff4;color:#27ae60">특이사항없음</span></td>
+          <td>현재 상태가 양호하며, 정상적인 사용 및 유지관리가 이루어지고 있는 상태</td>
+          <td style="font-size:9px; color:#4a6a8a">별도 조치 불필요</td>
+        </tr>
+        <tr>
+          <td><span class="criteria-badge" style="background:#fff8e1;color:#e67e22">경미/관리필요</span></td>
+          <td>경미한 노후화 또는 기능 저하가 관찰되나, 즉각적인 보수가 필요하지 않은 상태. 향후 관리 계획 수립 권장</td>
+          <td style="font-size:9px; color:#4a6a8a">정기 점검 시 관리</td>
+        </tr>
+        <tr>
+          <td><span class="criteria-badge" style="background:#fff8e1;color:#d35400">보수/교체권장</span></td>
+          <td>기능 저하, 노후화, 손상 등이 확인되어 보수 또는 교체가 필요한 상태. 방치 시 추가 손상 또는 비용 증가 우려</td>
+          <td style="font-size:9px; color:#4a6a8a">입주 전·후 보수 권장</td>
+        </tr>
+        <tr>
+          <td><span class="criteria-badge" style="background:#fff0f0;color:#c0392b">즉시조치필요</span></td>
+          <td>안전, 위생, 구조적 문제 등으로 즉각적인 보수·교체가 필요한 상태. 거주자 안전에 직접적 영향 가능</td>
+          <td style="font-size:9px; color:#4a6a8a">즉시 전문가 상담 필요</td>
+        </tr>
+        <tr>
+          <td><span class="criteria-badge" style="background:#f4f7fb;color:#7a8fa3">해당없음</span></td>
+          <td>해당 설비가 없거나, 점검 대상에 해당하지 않는 항목</td>
+          <td style="font-size:9px; color:#4a6a8a">-</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="rpt-section-title" style="margin-top:20px">내구연한 판정 기준</div>
+    <div style="font-size:10px; color:#4a6a8a; line-height:1.6; margin-bottom:10px">
+      각 설비의 표준 내구연한 대비 경과연수를 기준으로 잔여 수명을 산출합니다.
+    </div>
+    <table class="criteria-table">
+      <thead><tr><th>잔여연한</th><th>상태</th><th>권장 조치</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600; color:#27ae60">5년 초과</td><td>정상 범위</td><td style="font-size:9px; color:#4a6a8a">정기 점검 유지</td></tr>
+        <tr><td style="font-weight:600; color:#e67e22">1~5년</td><td>교체 시기 임박</td><td style="font-size:9px; color:#4a6a8a">교체 계획 수립 권장</td></tr>
+        <tr><td style="font-weight:600; color:#c0392b">0년 이하</td><td>내구연한 초과</td><td style="font-size:9px; color:#4a6a8a">즉시 점검 및 교체 검토</td></tr>
+      </tbody>
+    </table>
+
+    <div class="rpt-section-title" style="margin-top:20px">점검 범위 및 한계</div>
+    <div style="font-size:9.5px; color:#4a6a8a; line-height:1.7">
+      <p>• 비파괴 검사 원칙: 시설물을 파손하지 않고 육안 및 장비로 확인 가능한 범위</p>
+      <p>• 벽체 내부, 천장 상부, 바닥 하부, 매립 배관 등은 확인 불가</p>
+      <p>• 누수·결로 등 특정 환경 조건에서만 발현되는 증상은 점검 시점에 미발견 가능</p>
+      <p>• 가구, 집기, 적재물에 의해 가려진 부분은 점검 범위에서 제외</p>
+    </div>
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── 종합 지표 ──
+  const ind = report.indicators || {};
+  const safetyItems = [
+    { label: '가스 누설 및 안전', key: 'gasSafety', comment: 'gasSafetyComment' },
+    { label: '전기 안전', key: 'electricalSafety', comment: 'electricalSafetyComment' },
+    { label: '구조 및 낙상 위험', key: 'structuralSafety', comment: 'structuralSafetyComment' },
+  ];
+  const costItems = [
+    { label: '설비 작동 성능', key: 'equipmentPerformance' },
+    { label: '환경 쾌적 성능', key: 'environmentComfort' },
+    { label: '단열 열환경 성능', key: 'insulationPerformance' },
+    { label: '마감 편의 성능', key: 'finishPerformance' },
+  ];
+
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '세대정보 및 주요이슈')}
+    <div class="rpt-section-title">핵심 안전리스크 항목</div>
+    <table class="info-table">
+      ${safetyItems.map(item => `
+        <tr>
+          <td class="label-cell">${item.label}</td>
+          <td>${pb(ind[item.key])}</td>
+          <td colspan="2" style="font-size:9px;color:#4a6a8a">${val(ind[item.comment], '')}</td>
+        </tr>
+      `).join('')}
+    </table>
+
+    <div class="rpt-section-title">상대적 성능 참고 지표</div>
+    <div class="indicator-grid" style="grid-template-columns:repeat(4,1fr)">
+      ${costItems.map(item => `
+        <div class="indicator-card">
+          <div class="indicator-label">${item.label}</div>
+          <div class="indicator-value">${pb(ind[item.key])}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="rpt-section-title">비용리스크 상세</div>
+    <table class="info-table">
+      <tr>
+        <td class="label-cell">난방배관</td>
+        <td>${val(ind.heatingPipeCost)}</td>
+        <td colspan="2" style="font-size:9px">${val(ind.heatingPipeComment, '')}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">욕실/발코니 방수</td>
+        <td>${val(ind.bathroomWaterproofCost)}</td>
+        <td colspan="2" style="font-size:9px">${val(ind.bathroomWaterproofComment, '')}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">창호 및 외벽</td>
+        <td>${val(ind.windowExteriorCost)}</td>
+        <td colspan="2" style="font-size:9px">${val(ind.windowExteriorComment, '')}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">급수/배수 배관</td>
+        <td>${val(ind.plumbingCost)}</td>
+        <td colspan="2" style="font-size:9px">${val(ind.plumbingComment, '')}</td>
+      </tr>
+    </table>
+
+    ${ind.sunlightGrade || ind.opennessGrade || ind.solarGrade ? `
+      <div class="rpt-section-title">환경 성능 참고지표</div>
+      <table class="info-table">
+        <tr>
+          <td class="label-cell">일조시간</td><td>${val(ind.sunlightGrade, '-')}등급</td>
+          <td class="label-cell">개방감(뷰)</td><td>${val(ind.opennessGrade, '-')}등급</td>
+          <td class="label-cell">일사량</td><td>${val(ind.solarGrade, '-')}등급</td>
+        </tr>
+      </table>
+    ` : ''}
+    ${ind.repairCostMin || ind.repairCostMax ? `
+      <div style="margin-top:8px">
+        <table class="info-table">
+          <tr>
+            <td class="label-cell">예상 총 수선비용</td>
+            <td colspan="3">${val(ind.repairCostMin, '?')} ~ ${val(ind.repairCostMax, '?')} 만원</td>
+          </tr>
+        </table>
+      </div>
+    ` : ''}
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── Page 4: 내구연한 검토 ──
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '주요항목 내구연한 검토')}
+    <table class="dur-table-print">
+      <thead>
+        <tr>
+          <th style="text-align:left;width:120px">항목</th>
+          <th>표준연한(년)</th>
+          <th>경과연수(년)</th>
+          <th>잔여연한(년)</th>
+          <th>판정</th>
+          <th style="text-align:left">비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(report.durability || []).map(row => `
+          <tr>
+            <td class="item-name">${row.item}</td>
+            <td>${val(row.standard)}</td>
+            <td>${val(row.current)}</td>
+            <td style="font-weight:700;color:${Number(row.remaining) > 0 ? '#27ae60' : '#c0392b'}">${val(row.remaining)}</td>
+            <td>${pb(row.status)}</td>
+            <td style="text-align:left;font-size:9px">${val(row.comment)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── Page 5: 종합판단요약 ──
+  const sum = report.summary || {};
+  const catStats = Report.calcCategoryStats(report);
+  const totalStats = Report.calcStats(report);
+  const statusLabelsP = { good: '양호', normal: '경미', bad: '보수', danger: '즉시' };
+  const statusColorsP = { good: '#27ae60', normal: '#e67e22', bad: '#d35400', danger: '#c0392b' };
+
+  // 내구연한 주의 항목
+  const durWarningsP = (report.durability || []).filter(r => { const rem = parseFloat(r.remaining); return !isNaN(rem) && rem <= 5; });
+
+  // 주요 지적 항목
+  const issueItemsP = [];
+  Object.entries(report.categoryData || {}).forEach(([cat, cd]) => {
+    const catLabel = (Report.CATEGORIES[cat] || {}).label || cat;
+    Object.entries(cd.subStatuses || {}).forEach(([name, st]) => {
+      if (st === 'bad' || st === 'danger') issueItemsP.push({ cat: catLabel, name, status: st });
+    });
+  });
+
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '종합진단결과 요약 및 리스크분석')}
+    <div class="summary-overall">
+      <span class="overall-label">종합 판정</span>
+      ${pb(sum.overallStatus)}
+      <span style="font-size:10px;color:#4a6a8a;margin-left:12px">예상보수비용: 약 ${val(ind.repairCostMin, '?')}~${val(ind.repairCostMax, '?')}만원</span>
+    </div>
+
+    ${sum.summaryText ? `
+      <div class="rpt-section-title">종합 요약</div>
+      <div style="font-size:10px; color:#4a6a8a; line-height:1.7; margin-bottom:12px; white-space:pre-wrap">${val(sum.summaryText)}</div>
+    ` : ''}
+
+    <div class="rpt-section-title">진단 통계</div>
+    <div style="display:flex; gap:10px; margin-bottom:14px">
+      ${Object.entries(statusLabelsP).map(([k, label]) => `
+        <div style="flex:1; text-align:center; padding:8px 4px; background:${statusColorsP[k]}10; border-radius:6px; border:1px solid ${statusColorsP[k]}30">
+          <div style="font-size:18px; font-weight:700; color:${statusColorsP[k]}">${totalStats[k] || 0}</div>
+          <div style="font-size:8px; color:#4a6a8a">${label}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="rpt-section-title">카테고리별 현황</div>
+    <table class="info-table" style="font-size:9px; margin-bottom:14px">
+      <thead><tr>
+        <th style="padding:3px 6px; text-align:left">카테고리</th>
+        ${Object.entries(statusLabelsP).map(([k,v]) => `<th style="padding:3px 4px; text-align:center; color:${statusColorsP[k]}">${v}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${Object.entries(catStats).map(([cat, s]) => `
+          <tr${s.bad > 0 || s.danger > 0 ? ' style="background:#fff0f0"' : ''}>
+            <td style="padding:3px 6px; font-weight:600">${s.label}</td>
+            ${['good','normal','bad','danger'].map(k =>
+              `<td style="padding:3px 4px; text-align:center; ${s[k] > 0 ? 'font-weight:700; color:'+statusColorsP[k] : 'color:#aab8c2'}">${s[k] || '-'}</td>`
+            ).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    ${issueItemsP.length > 0 ? `
+      <div class="rpt-section-title">주요 지적 항목</div>
+      <table class="info-table" style="font-size:9px; margin-bottom:14px">
+        <thead><tr><th style="padding:3px 6px">판정</th><th style="padding:3px 6px">카테고리</th><th style="padding:3px 6px">항목</th></tr></thead>
+        <tbody>
+          ${issueItemsP.map(item => `
+            <tr style="background:${item.status === 'danger' ? '#fff0f0' : '#fff8e1'}">
+              <td style="padding:3px 6px"><span class="status-badge ${item.status}">${item.status === 'danger' ? '즉시조치' : '보수권장'}</span></td>
+              <td style="padding:3px 6px; font-size:8px; color:#4a6a8a">${escapeHTML(item.cat)}</td>
+              <td style="padding:3px 6px; font-weight:600">${escapeHTML(item.name)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : ''}
+
+    ${durWarningsP.length > 0 ? `
+      <div class="rpt-section-title">내구연한 주의 (잔여 5년 이하)</div>
+      <table class="info-table" style="font-size:9px">
+        <thead><tr><th style="padding:3px 6px">항목</th><th style="padding:3px 6px">잔여</th><th style="padding:3px 6px">상태</th></tr></thead>
+        <tbody>
+          ${durWarningsP.map(w => `
+            <tr style="background:${parseFloat(w.remaining) <= 0 ? '#fff0f0' : '#fff8e1'}">
+              <td style="padding:3px 6px; font-weight:600">${w.item}</td>
+              <td style="padding:3px 6px; font-weight:700; color:${parseFloat(w.remaining) <= 0 ? '#c0392b' : '#e67e22'}">${w.remaining}년</td>
+              <td style="padding:3px 6px">${pb(w.status)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : ''}
+
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── Page 6: 전문가 분석의견 ──
+  const exp = report.expertOpinion || {};
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '전문가 분석 및 의견')}
+    <div class="expert-box">
+      <div class="expert-box-title">안전 리스크</div>
+      <div class="expert-box-text">${val(exp.safetyRisk)}</div>
+    </div>
+    <div class="expert-box">
+      <div class="expert-box-title">비용 리스크</div>
+      <div class="expert-box-text">${val(exp.costRisk)}</div>
+    </div>
+    <div class="expert-box">
+      <div class="expert-box-title">성능 및 거주체감</div>
+      <div class="expert-box-text">${val(exp.livingPerformance)}</div>
+    </div>
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── 간지: 세부진단 ──
+  pages.push(`
+    <div class="report-page divider-page">
+      <span class="page-label no-print">간지</span>
+      <div class="divider-line"></div>
+      <div class="divider-num">PART 03</div>
+      <div class="divider-title">세부 진단 결과</div>
+      <div class="divider-sub">Detailed Inspection Results</div>
+    </div>
+  `);
+
+  // ── 세부 진단 결과표 (A~H 요약) ──
+  // catStats는 이미 Page 5에서 선언됨
+
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '세부진단 결과표')}
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th>카테고리</th>
+          <th>특이사항없음</th>
+          <th>경미/관리</th>
+          <th>보수/교체</th>
+          <th>즉시조치</th>
+          <th>전체</th>
+          <th>종합</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Object.entries(catStats).map(([cat, s]) => {
+          let overall = 'none';
+          if (s.danger > 0) overall = 'danger';
+          else if (s.bad > 0) overall = 'bad';
+          else if (s.normal > 0) overall = 'normal';
+          else if (s.good > 0) overall = 'good';
+          return `
+            <tr>
+              <td style="font-weight:600">${s.label}</td>
+              <td style="text-align:center;color:#27ae60;font-weight:600">${s.good}</td>
+              <td style="text-align:center;color:#e67e22;font-weight:600">${s.normal}</td>
+              <td style="text-align:center;color:#d35400;font-weight:600">${s.bad}</td>
+              <td style="text-align:center;color:#c0392b;font-weight:600">${s.danger}</td>
+              <td style="text-align:center;color:#4a6a8a">${s.total}</td>
+              <td style="text-align:center">${pb(overall)}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    ${pageFooter(report, pageNum)}
+  `));
+  pageNum++;
+
+  // ── Pages 8+: 세부 진단 카테고리별 ──
+  const catData = report.categoryData || {};
+
+  for (const [cat, catInfo] of Object.entries(CATS)) {
+    const cd = catData[cat] || { subStatuses: {}, opinion: '', fixedTables: {}, cards: [] };
+
+    let catContent = '';
+
+    // 체크리스트
+    const subs = cd.subStatuses || {};
+    const subEntries = Object.entries(subs).filter(([, v]) => v);
+    if (subEntries.length > 0) {
+      catContent += `
+        <div class="rpt-section-title">주요점검항목</div>
+        <table class="checklist-table">
+          <thead><tr><th>점검항목</th><th>판정</th></tr></thead>
+          <tbody>
+            ${catInfo.subItems.map(sub => `
+              <tr>
+                <td class="sub-name">${sub}</td>
+                <td>${subs[sub] ? pb(subs[sub]) : '<span class="empty-text">미입력</span>'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // 종합의견
+    if (cd.opinion && cd.opinion.trim()) {
+      catContent += `
+        <div class="rpt-section-title">종합의견</div>
+        <div style="font-size:10px; color:#4a6a8a; line-height:1.7; white-space:pre-wrap; margin-bottom:12px">${escapeHTML(cd.opinion)}</div>
+      `;
+    }
+
+    // 카드 렌더링 헬퍼
+    function renderCardPreview(card, catKey) {
+      if (!card.title && !card.fieldNote &&
+          (!card.photos || card.photos.filter(Boolean).length === 0) &&
+          (!card.subJudgments || card.subJudgments.length === 0)) {
+        return '';
+      }
+
+      let cardBody = '';
+
+      if (card.subJudgments && card.subJudgments.length > 0) {
+        const validSJ = card.subJudgments.filter(sj => sj.name || sj.status);
+        if (validSJ.length > 0) {
+          cardBody += `
+            <table class="sj-table">
+              <thead><tr><th>항목</th><th>판정</th></tr></thead>
+              <tbody>
+                ${validSJ.map(sj => `
+                  <tr>
+                    <td>${val(sj.name)}</td>
+                    <td>${pb(sj.status)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+      }
+
+      if (card.fieldNote && card.fieldNote.trim()) {
+        cardBody += `
+          <div class="diag-label">현장노트</div>
+          <div class="diag-text">${escapeHTML(card.fieldNote)}</div>
+        `;
+      }
+
+      const validPhotos = (card.photos || []).filter(Boolean);
+      if (validPhotos.length > 0) {
+        const cols = card.photoLayout || String(validPhotos.length);
+        cardBody += `
+          <div class="photo-grid" data-cols="${cols}" id="cardphotos_${catKey}_${card.id}">
+            ${validPhotos.map((p, pi) => `
+              <div class="photo-cell" id="pcell_${catKey}_${card.id}_${pi}">
+                <div style="background:#f4f7fb;padding:20px;text-align:center;font-size:9px;color:#aab8c2;border-radius:4px">사진 로딩중...</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="diag-card">
+          <div class="diag-card-header">
+            <span class="diag-card-title">${val(card.title, '(제목 없음)')}</span>
+          </div>
+          <div class="diag-card-body">
+            ${cardBody || '<span class="empty-text">내용 없음</span>'}
+          </div>
+        </div>
+      `;
+    }
+
+    // 섹션 기반 또는 기본 렌더링
+    if (catInfo.sections) {
+      catInfo.sections.forEach(sec => {
+        if (sec.type === 'table') {
+          const tableDef = catInfo.fixedTables[sec.key];
+          if (tableDef) {
+            const rows = (cd.fixedTables || {})[sec.key] || [];
+            catContent += renderFixedTablePreview(sec.key, tableDef, rows);
+          }
+        } else if (sec.type === 'cards') {
+          const slotCards = (cd.cardSlots || {})[sec.key] || [];
+          slotCards.forEach(card => {
+            catContent += renderCardPreview(card, cat + '_' + sec.key);
+          });
+        }
+      });
+    } else {
+      // 기존 방식
+      if (catInfo.fixedTables) {
+        Object.entries(catInfo.fixedTables).forEach(([tableKey, tableDef]) => {
+          const rows = (cd.fixedTables || {})[tableKey] || [];
+          catContent += renderFixedTablePreview(tableKey, tableDef, rows);
+        });
+      }
+      (cd.cards || []).forEach(card => {
+        catContent += renderCardPreview(card, cat);
+      });
+    }
+
+    // 내용이 없더라도 카테고리는 렌더링
+    if (!catContent.trim()) {
+      catContent = '<div class="empty-text" style="padding:20px 0">입력된 내용이 없습니다.</div>';
+    }
+
+    pages.push(pageWrap(pageNum, `
+      ${pageHeader(report, `세부 진단 - ${catInfo.label}`)}
+      ${catContent}
+      ${pageFooter(report, pageNum)}
+    `));
+    pageNum++;
+  }
+
+  // ── 간지: 점검 기준 안내 ──
+  pages.push(`
+    <div class="report-page divider-page">
+      <span class="page-label no-print">간지</span>
+      <div class="divider-line"></div>
+      <div class="divider-num">APPENDIX</div>
+      <div class="divider-title">점검 기준 안내</div>
+      <div class="divider-sub">Inspection Criteria Reference</div>
+    </div>
+  `);
+
+  // ── 기준 안내 페이지들 (카테고리별) ──
+  const criteriaColors = {good:'#27ae60',normal:'#e67e22',bad:'#d35400',danger:'#c0392b'};
+  const criteriaBgs = {good:'#f0fff4',normal:'#fff8e1',bad:'#fff8e1',danger:'#fff0f0'};
+  Object.entries(window.CRITERIA_PAGES || {}).forEach(([cat, cp]) => {
+    pageNum++;
+    let criteriaHTML = `
+      <div style="font-size:9px; color:#4a6a8a; margin-bottom:14px">아래 기준은 본 진단에 적용된 판정 근거입니다.</div>
+    `;
+    cp.items.forEach(item => {
+      criteriaHTML += `
+        <div style="margin-bottom:12px; page-break-inside:avoid">
+          <div style="font-size:10px; font-weight:700; color:#0a1628; margin-bottom:3px; padding:4px 0; border-bottom:1px solid #e8eef6">${item.name}</div>
+          <div style="font-size:8px; color:#4a6a8a; margin-bottom:4px">점검방법: ${item.method}</div>
+          <table style="width:100%; border-collapse:collapse; font-size:8.5px; margin-bottom:2px">
+            ${item.criteria.map(c => `<tr>
+              <td style="width:85px; padding:2px 6px; vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:7.5px;font-weight:700;background:${criteriaBgs[c.grade]};color:${criteriaColors[c.grade]}">${c.label}</span></td>
+              <td style="padding:2px 6px; color:#4a6a8a; font-size:8px">${c.desc}</td>
+            </tr>`).join('')}
+          </table>
+          <div style="font-size:7px; color:#aab8c2; text-align:right">근거: ${item.reference}</div>
+        </div>
+      `;
+    });
+    pages.push(pageWrap(pageNum, `
+      ${pageHeader(report, cp.subtitle + ' - 점검 기준 안내')}
+      ${criteriaHTML}
+      ${pageFooter(report, pageNum)}
+    `));
+  });
+
+  // ── 면책조항 / 서명 ──
+  pageNum++;
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '점검 고지 및 참고사항')}
+    <div style="font-size:9.5px; color:#4a6a8a; line-height:1.8; margin-bottom:20px">
+      <p>본 보고서는 육안 점검 및 간이 측정 기기를 활용한 현장 진단 결과를 바탕으로 작성되었습니다. 은폐된 부위, 가구 또는 마감재에 의해 가려진 부분 등 점검이 불가능한 부위에 대해서는 조사 범위에서 제외되었으며, 이에 대한 책임을 지지 않습니다.</p>
+      <br>
+      <p>본 보고서는 의뢰인에게 주택의 현재 상태에 관한 정보를 제공하기 위한 참고 자료로, 법적 효력을 갖는 공식 문서가 아닙니다. 중요한 결정 전에는 반드시 관련 전문가의 추가 자문을 받으시기 바랍니다.</p>
+      <br>
+      <p><strong>점검범위 및 한계:</strong> 시설물을 파손하지 않고 육안 및 장비로 확인 가능한 범위 내에서만 진단합니다. 벽체 내부, 천장 상부, 바닥 하부, 매립 배관 등 보이지 않는 곳은 확인이 불가합니다. 누수나 결로 등 특정 계절/날씨에만 발현되는 증상은 점검 시점에 발견되지 않을 수 있습니다.</p>
+    </div>
+    <div style="display:flex; gap:40px; margin-top:40px;">
+      <div style="flex:1; text-align:center">
+        <div style="font-size:10px; color:#4a6a8a; margin-bottom:8px">진단자</div>
+        <div style="font-size:13px; font-weight:700; color:#0a1628; margin-bottom:4px">${val(b.inspectorName)}</div>
+        <div style="border-top:1px solid #d8e2ec; margin-top:30px; padding-top:4px; font-size:9px; color:#aab8c2">(서명)</div>
+      </div>
+      <div style="flex:1; text-align:center">
+        <div style="font-size:10px; color:#4a6a8a; margin-bottom:8px">의뢰인</div>
+        <div style="font-size:13px; font-weight:700; color:#0a1628; margin-bottom:4px">${val(b.clientName)}</div>
+        <div style="border-top:1px solid #d8e2ec; margin-top:40px; padding-top:4px; font-size:9px; color:#aab8c2">(서명)</div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:32px; font-size:9px; color:#aab8c2">
+      보고서 작성일: ${val(b.reportDate)} | 더보다 AI (home.theboda.io)
+    </div>
+    ${pageFooter(report, pageNum)}
+  `));
+
+  // ── 서비스 연계 소개 ──
+  pageNum++;
+  pages.push(pageWrap(pageNum, `
+    ${pageHeader(report, '더보다 AI 서비스 안내')}
+    <div style="text-align:center; margin:24px 0 20px">
+      <img src="assets/ci-logo.png" alt="더보다 AI" style="height:40px; margin-bottom:8px">
+      <div style="font-size:10px; color:#4a6a8a">AI 기반 주택 진단 전문 서비스</div>
+    </div>
+
+    <div class="rpt-section-title">제공 서비스</div>
+    <table class="info-table" style="font-size:10px; margin-bottom:16px">
+      <tr>
+        <td class="label-cell" style="width:120px; font-weight:700">주택 진단 보고서</td>
+        <td>비파괴 정밀 진단을 통한 주택 상태 종합 분석 보고서 제공</td>
+      </tr>
+      <tr>
+        <td class="label-cell" style="font-weight:700">환경 성능 분석</td>
+        <td>단열·결로·공기질·에너지 효율 등 환경 성능 분석</td>
+      </tr>
+      <tr>
+        <td class="label-cell" style="font-weight:700">리모델링 컨설팅</td>
+        <td>진단 결과 기반 맞춤형 리모델링 방향 및 비용 제안</td>
+      </tr>
+      <tr>
+        <td class="label-cell" style="font-weight:700">시공 품질 검수</td>
+        <td>리모델링·인테리어 시공 후 품질 검수 서비스</td>
+      </tr>
+    </table>
+
+    <div class="rpt-section-title">문의 및 연락처</div>
+    <table class="info-table" style="font-size:10px">
+      <tr>
+        <td class="label-cell" style="width:120px">홈페이지</td>
+        <td>home.theboda.io</td>
+      </tr>
+      <tr>
+        <td class="label-cell">상담 문의</td>
+        <td>홈페이지 내 상담 예약</td>
+      </tr>
+    </table>
+
+    <div style="margin-top:32px; padding:16px; background:#f4f7fb; border-radius:8px; text-align:center">
+      <div style="font-size:11px; font-weight:600; color:#1a3669; margin-bottom:6px">더보다 AI와 함께 안전하고 건강한 주거 환경을 만들어 가세요.</div>
+      <div style="font-size:9px; color:#4a6a8a">본 보고서에 대한 추가 문의사항은 언제든 연락 주시기 바랍니다.</div>
+    </div>
+    ${pageFooter(report, pageNum)}
+  `));
+
+  // 렌더링
+  viewer.innerHTML = pages.join('');
+
+  // 이미지 비동기 로딩
+  await loadAllCardImages(report);
+
+  // 평면도 로드
+  const fpBase64 = await Report.loadImage('floorplan');
+  const fpContainer = document.getElementById('preview-floorplan');
+  if (fpContainer) {
+    if (fpBase64) {
+      fpContainer.innerHTML = `<img src="${fpBase64}" alt="평면도" style="width:100%; height:auto; border-radius:4px">`;
+    } else {
+      fpContainer.innerHTML = '<span style="font-size:9px; color:#aab8c2">평면도 미등록</span>';
+    }
+  }
+}
+
+async function loadAllCardImages(report) {
+  const catData = report.categoryData || {};
+  const CATS = Report.CATEGORIES;
+
+  async function loadCardsImages(cards, catKey) {
+    for (const card of cards) {
+      const validPhotos = (card.photos || []).filter(Boolean);
+      for (let pi = 0; pi < validPhotos.length; pi++) {
+        const photo = validPhotos[pi];
+        if (!photo || !photo.id) continue;
+
+        const cellEl = document.getElementById(`pcell_${catKey}_${card.id}_${pi}`);
+        if (!cellEl) continue;
+
+        const base64 = await Report.loadImage(photo.id);
+        const titleText = photo.captionTitle || photo.caption || '';
+        const detailText = photo.captionDetail || '';
+        const obsText = photo.observation || '';
+        if (base64) {
+          cellEl.innerHTML = `
+            <img src="${base64}" alt="${photo.name || '사진'}">
+            ${titleText ? `<div class="photo-cell-caption" style="font-weight:600;color:#0a1628">${escapeHTML(titleText)}</div>` : ''}
+            ${detailText ? `<div class="photo-cell-caption" style="font-size:7.5px">${escapeHTML(detailText)}</div>` : ''}
+            ${obsText ? `<div class="photo-cell-caption">${escapeHTML(obsText)}</div>` : ''}
+          `;
+        } else {
+          cellEl.innerHTML = '<div style="background:#f4f7fb;padding:20px;text-align:center;font-size:9px;color:#aab8c2;border-radius:4px">사진 없음</div>';
+        }
+      }
+    }
+  }
+
+  for (const [cat, cd] of Object.entries(catData)) {
+    const catInfo = CATS[cat];
+    if (catInfo && catInfo.sections) {
+      for (const sec of catInfo.sections) {
+        if (sec.type === 'cards') {
+          const slotCards = (cd.cardSlots || {})[sec.key] || [];
+          await loadCardsImages(slotCards, cat + '_' + sec.key);
+        }
+      }
+    } else {
+      await loadCardsImages(cd.cards || [], cat);
+    }
+  }
+}
+
+// ==========================================
+// 초기화
+// ==========================================
+document.addEventListener('DOMContentLoaded', renderReport);
+</script>
+</body>
+</html>

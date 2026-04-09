@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보고서 목록 - 더보다 AI</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .list-header h2 {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .report-list-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-sm);
+    }
+    .report-list-table th {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: var(--sp-3) var(--sp-4);
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .report-list-table td {
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: middle;
+    }
+    .report-list-table tr:hover td {
+      background: rgba(255,255,255,0.03);
+    }
+    .report-list-table .report-address {
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .report-list-table .report-address:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    .report-no-cell {
+      font-family: monospace;
+      font-size: var(--font-size-xs);
+      color: var(--primary);
+    }
+    .progress-mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .progress-mini-bar {
+      width: 60px;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-mini-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+      transition: width 0.3s;
+    }
+    .progress-mini-text {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      min-width: 32px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state h3 {
+      font-size: var(--font-size-lg);
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .empty-state p {
+      font-size: var(--font-size-sm);
+      margin-bottom: 24px;
+    }
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .action-btns .btn {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+    .date-cell {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">더보다 AI</div>
+      <div class="logo-sub">주택 진단 보고서 시스템</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">메뉴</div>
+        <a href="list.html" class="nav-item active">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          보고서 목록
+        </a>
+        <a href="index.html" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          보고서 입력
+        </a>
+        <a href="preview.html" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          미리보기 / 출력
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size:11px; color: var(--text-muted)">
+        더보다 AI v2.0
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">보고서 관리</div>
+    </header>
+
+    <div class="page-content">
+      <div class="list-header">
+        <h2>보고서 목록</h2>
+        <button class="btn btn-primary" onclick="createNewReport()">+ 새 보고서</button>
+      </div>
+
+      <div class="card" id="report-list-card">
+        <div id="report-list-content">
+          <!-- JS로 렌더링 -->
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="assets/report.js"></script>
+<script>
+function renderList() {
+  const container = document.getElementById('report-list-content');
+  const list = Report.getReportsList();
+  const activeId = Report.getActiveReportId();
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>아직 보고서가 없습니다</h3>
+        <p>새 보고서를 생성하여 주택 진단을 시작하세요.</p>
+        <button class="btn btn-primary btn-lg" onclick="createNewReport()">+ 새 보고서 만들기</button>
+      </div>
+    `;
+    return;
+  }
+
+  // 최근 수정 순으로 정렬
+  list.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+  container.innerHTML = `
+    <table class="report-list-table">
+      <thead>
+        <tr>
+          <th>보고서 번호</th>
+          <th>주소</th>
+          <th>진단일</th>
+          <th>진행률</th>
+          <th>최근 수정</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(r => {
+          const isActive = r.id === activeId;
+          return `
+          <tr style="${isActive ? 'background:rgba(74,144,217,0.08)' : ''}">
+            <td class="report-no-cell">${r.reportNo || '-'}</td>
+            <td>
+              <span class="report-address" onclick="openReport('${r.id}')">${r.address || '(주소 미입력)'}</span>
+              ${isActive ? '<span style="font-size:10px;color:var(--primary);margin-left:6px;font-weight:600">[현재]</span>' : ''}
+            </td>
+            <td class="date-cell">${r.inspectionDate || '-'}</td>
+            <td>
+              <div class="progress-mini">
+                <div class="progress-mini-bar">
+                  <div class="progress-mini-fill" style="width:${r.progress || 0}%"></div>
+                </div>
+                <span class="progress-mini-text">${r.progress || 0}%</span>
+              </div>
+            </td>
+            <td class="date-cell">${r.updatedAt ? formatDateShort(r.updatedAt) : '-'}</td>
+            <td>
+              <div class="action-btns">
+                <button class="btn btn-ghost btn-sm" onclick="openReport('${r.id}')">열기</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteReportConfirm('${r.id}', '${(r.address || '').replace(/'/g, "\\'")}')">삭제</button>
+              </div>
+            </td>
+          </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function createNewReport() {
+  Report.createNew();
+  window.location.href = 'index.html';
+}
+
+function openReport(id) {
+  Report.setActiveReportId(id);
+  window.location.href = 'index.html';
+}
+
+function deleteReportConfirm(id, address) {
+  const msg = address ? `"${address}" 보고서를 삭제하시겠습니까?` : '이 보고서를 삭제하시겠습니까?';
+  if (confirm(msg + '\n이 작업은 되돌릴 수 없습니다.')) {
+    Report.delete(id);
+    Report.showToast('보고서가 삭제되었습니다', 'success');
+    renderList();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // v1 마이그레이션
+  Report.migrateV1();
+  renderList();
+});
+</script>
+</body>
+</html>
