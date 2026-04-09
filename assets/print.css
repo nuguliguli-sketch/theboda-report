@@ -1,114 +1,85 @@
 /* ==========================================
-   더보다 AI - 보고서 출력용 스타일 (A4 세로 라이트모드)
-   디자인 가이드: THEBODA-DESIGN-RULES.md
+   더보다 AI - 보고서 출력용 스타일 (A4 세로)
+   v2.0 전면 재작성 — 인쇄 품질 최적화
    ========================================== */
 
 @media print {
-  /* -- A4 Page Setup -- */
+
+  /* ── A4 Setup ── */
   @page {
     size: A4 portrait;
-    margin: 15mm 15mm 15mm 15mm;
-  }
-
-  @page :first {
     margin: 0;
   }
 
-  /* -- Reset to Light Mode (디자인 가이드 색상) -- */
-  :root {
-    --bg-deep: #ffffff;
-    --bg-dark: #ffffff;
-    --bg-card: #f4f7fb;
-    --bg-card-hover: #f4f7fb;
-    --bg-input: #f4f7fb;
-    --text-primary: #0a1628;
-    --text-secondary: #4a6a8a;
-    --text-muted: #4a6a8a;
-    --text-accent: #4a90d9;
-    --border: #d8e2ec;
-    --border-hover: #4a90d9;
-    --primary: #4a90d9;
-    --primary-dark: #1a3669;
-    --primary-glow: rgba(74, 144, 217, 0.12);
-    --glass-bg: #f4f7fb;
-    --glass-border: #d8e2ec;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-    --shadow-md: 0 2px 8px rgba(0,0,0,0.10);
-
-    --status-good: #27ae60;
-    --status-good-bg: #f0fff4;
-    --status-normal: #e67e22;
-    --status-normal-bg: #fff8e1;
-    --status-bad: #d35400;
-    --status-bad-bg: #fff8e1;
-    --status-danger: #c0392b;
-    --status-danger-bg: #fff0f0;
-  }
-
+  /* ── 인쇄 색상 강제 적용 ── */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
 
-  /* -- Hide UI Chrome -- */
-  .sidebar,
-  .topbar,
-  .topbar-actions,
-  .btn,
-  .toast-container,
-  .no-print,
-  .section-header .btn,
-  .tab-nav-buttons,
-  #save-btn,
-  #preview-btn {
+  /* ── UI 요소 완전 숨기기 ── */
+  .sidebar, .topbar, .topbar-actions, .toast-container,
+  .no-print, .tab-nav-buttons, .btn,
+  .section-header .btn, #save-btn, #preview-btn,
+  .preview-toolbar {
     display: none !important;
   }
 
-  /* -- Layout Reset -- */
-  body {
+  /* ── 미리보기 래퍼 배경 제거 ── */
+  body, html {
     background: #fff !important;
-    color: #0a1628 !important;
-    font-size: 10pt;
-    line-height: 1.5;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .preview-wrap {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  .report-viewer {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  .app-layout { display: block; }
-  .main-content { margin-left: 0 !important; }
-  .page-content { padding: 0 !important; max-width: 100% !important; }
-
-  /* -- Report Pages -- */
+  /* ── 기본 보고서 페이지 ── */
   .report-page {
     width: 210mm;
     min-height: 297mm;
-    padding: 15mm 15mm 22mm;
-    background: #fff;
+    padding: 15mm 15mm 20mm;
+    margin: 0 !important;
+    background: #fff !important;
+    color: #0a1628 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
     page-break-after: always;
     position: relative;
     box-sizing: border-box;
+    font-family: 'Pretendard Variable', 'Nanum Square Neo', 'Noto Sans KR', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.55;
+  }
+  .report-page:last-child {
+    page-break-after: avoid;
   }
 
-  .report-page:last-child { page-break-after: avoid; }
-
-  /* -- Cover Page (Brand Deep 배경) -- */
+  /* ──────────────────────────────────
+     표지 (2분할 레이아웃)
+     ────────────────────────────────── */
   .cover-page {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important;
     height: 297mm;
-    padding: 30mm;
-    background: #ffffff !important;
+    overflow: hidden;
   }
-
-  /* 표지 2분할 */
   .cover-left {
     flex: 6;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 20mm 16mm 15mm;
+    padding: 25mm 18mm 20mm;
     position: relative;
   }
   .cover-right {
@@ -117,235 +88,281 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15mm 8mm;
+    justify-content: space-between;
+    padding: 20mm 10mm;
   }
   .cover-right * { color: #fff !important; }
-  .cover-right-logo { height: 10mm; margin-bottom: auto; }
+  .cover-right-logo { height: 10mm; }
   .cover-right-circle {
-    width: 50mm; height: 50mm;
+    width: 45mm; height: 45mm;
     border-radius: 50%;
-    border: 1.5mm solid rgba(255,255,255,0.3) !important;
-    background: rgba(255,255,255,0.08) !important;
+    border: 1.2mm solid rgba(255,255,255,0.3) !important;
+    overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: auto;
   }
-  .cover-right-circle img { height: 18mm; }
+  .cover-right-circle img { width: 100%; height: 100%; object-fit: cover; }
   .cover-right-footer { font-size: 7pt; color: rgba(255,255,255,0.4) !important; }
-  .cover-doc-label { font-size: 8pt; color: #4a90d9 !important; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 2mm; }
-  .cover-title { font-size: 20pt !important; color: #1a3669 !important; margin-bottom: 2mm; }
-  .cover-address { font-size: 10pt; color: #4a6a8a !important; margin-bottom: 12mm; }
-  .cover-info-table { font-size: 9pt; }
+  .cover-doc-label { font-size: 8pt; color: #4a90d9 !important; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 3mm; }
+  .cover-title { font-size: 22pt !important; font-weight: 700; color: #1a3669 !important; margin-bottom: 3mm; line-height: 1.2; }
+  .cover-address { font-size: 10pt; color: #4a6a8a !important; margin-bottom: 15mm; line-height: 1.5; }
+  .cover-info-table { font-size: 9pt; width: 100%; max-width: 80mm; }
   .cover-info-table td { padding: 2mm 0; border-bottom: 0.3mm solid #e8eef6 !important; }
-  .cover-info-table td:first-child { color: #4a6a8a !important; width: 25mm; font-size: 8pt; }
+  .cover-info-table td:first-child { color: #4a6a8a !important; width: 22mm; font-size: 8pt; }
   .cover-info-table td:last-child { font-weight: 600; color: #0a1628 !important; }
   .cover-info-table tr:last-child td { border-bottom: none !important; }
-  .cover-footer { font-size: 7pt; color: #aab8c2 !important; }
+  .cover-footer { position: absolute; bottom: 10mm; left: 18mm; font-size: 7pt; color: #aab8c2 !important; }
 
-  /* 간지 */
+  /* ──────────────────────────────────
+     간지 (섹션 구분 페이지)
+     ────────────────────────────────── */
   .divider-page {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     height: 297mm;
+    padding: 0 !important;
     page-break-after: always;
   }
-  .divider-line { width: 12mm; height: 1mm; background: #4a90d9 !important; margin-bottom: 8mm; }
-  .divider-num { font-size: 9pt; font-weight: 700; color: #4a90d9; letter-spacing: 0.1em; margin-bottom: 3mm; }
-  .divider-title { font-size: 16pt; font-weight: 700; color: #1a3669; margin-bottom: 2mm; }
-  .divider-sub { font-size: 9pt; color: #4a6a8a; }
+  .divider-line { width: 12mm; height: 0.8mm; background: #4a90d9 !important; margin-bottom: 6mm; border-radius: 1mm; }
+  .divider-num { font-size: 9pt; font-weight: 700; color: #4a90d9 !important; letter-spacing: 0.1em; margin-bottom: 3mm; }
+  .divider-title { font-size: 18pt; font-weight: 700; color: #1a3669 !important; margin-bottom: 2mm; }
+  .divider-sub { font-size: 9pt; color: #4a6a8a !important; }
 
-  /* 판정 기준 */
-  .criteria-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 4mm; }
-  .criteria-table th { background: #f4f7fb !important; padding: 2mm 3mm; text-align: left; font-weight: 600; border-bottom: 0.5mm solid #d8e2ec; }
-  .criteria-table td { padding: 2mm 3mm; border-bottom: 0.3mm solid #eef2f7; }
-  .criteria-badge { display: inline-block; padding: 0.5mm 3mm; border-radius: 20pt; font-size: 7.5pt; font-weight: 700; }
-
-  .cover-info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 2mm 0;
-    font-size: 10pt;
-    border-bottom: 1px solid #e8eef6 !important;
-  }
-
-  .cover-info-row:last-child { border-bottom: none !important; }
-
-  /* -- Report Header (각 페이지) -- */
+  /* ──────────────────────────────────
+     페이지 머릿글 / 바닥글
+     ────────────────────────────────── */
   .rpt-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #4a90d9;
-    padding-bottom: 3mm;
-    margin-bottom: 6mm;
+    border-bottom: 1.5pt solid #4a90d9;
+    padding-bottom: 2.5mm;
+    margin-bottom: 5mm;
   }
-
-  .rpt-header-left {
-    font-size: 12pt;
-    font-weight: 700;
-    color: #0a1628;
-  }
-
-  .rpt-header-right {
-    font-size: 8pt;
-    color: #4a6a8a;
-  }
+  .rpt-header-brand { font-size: 8.5pt; font-weight: 700; color: #4a90d9 !important; }
+  .rpt-header-right { font-size: 7.5pt; color: #4a6a8a !important; }
 
   .rpt-page-title {
     font-size: 14pt;
     font-weight: 700;
-    color: #0a1628;
+    color: #0a1628 !important;
     margin-bottom: 4mm;
-    letter-spacing: -0.02em;
   }
 
   .rpt-section-title {
-    font-size: 10pt;
+    font-size: 9.5pt;
     font-weight: 700;
-    color: #4a90d9;
-    margin-bottom: 3mm;
-    margin-top: 5mm;
-    padding-left: 3mm;
-    border-left: 3px solid #4a90d9;
+    color: #4a90d9 !important;
+    margin: 4mm 0 2.5mm;
+    padding-left: 2.5mm;
+    border-left: 2.5pt solid #4a90d9;
   }
 
-  /* -- Tables -- */
-  .rpt-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8.5pt;
-    margin-bottom: 4mm;
-  }
-
-  .rpt-table th {
-    background: #4a90d9 !important;
-    color: #fff !important;
-    font-weight: 600;
-    padding: 2.5mm 3mm;
-    text-align: left;
-    font-size: 8pt;
-  }
-
-  .rpt-table td {
-    padding: 2mm 3mm;
-    border: 1px solid #d8e2ec;
-    vertical-align: middle;
-    font-size: 8.5pt;
-  }
-
-  .rpt-table tr:nth-child(even) td {
-    background: #f4f7fb !important;
-  }
-
-  /* -- Status Badges (출력용) -- */
-  .print-badge {
-    display: inline-block;
-    font-size: 7.5pt;
-    font-weight: 700;
-    padding: 1mm 3mm;
-    border-radius: 20pt;
-  }
-
-  .print-badge.good { background: #f0fff4 !important; color: #27ae60 !important; }
-  .print-badge.normal { background: #fff8e1 !important; color: #e67e22 !important; }
-  .print-badge.bad { background: #fff8e1 !important; color: #d35400 !important; }
-  .print-badge.danger { background: #fff0f0 !important; color: #c0392b !important; }
-  .print-badge.na { background: #f4f7fb !important; color: #4a6a8a !important; }
-
-  /* -- Photo Grid -- */
-  .photo-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4mm;
-    margin: 3mm 0;
-  }
-
-  .photo-grid-3 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 3mm;
-    margin: 3mm 0;
-  }
-
-  .photo-item { page-break-inside: avoid; }
-
-  .photo-item img {
-    width: 100%;
-    height: auto;
-    max-height: 55mm;
-    object-fit: cover;
-    border: 1px solid #d8e2ec;
-    border-radius: 3pt;
-    display: block;
-  }
-
-  .photo-caption {
-    font-size: 7.5pt;
-    color: #4a6a8a;
-    text-align: center;
-    margin-top: 1mm;
-    padding: 1mm 2mm;
-    background: #f4f7fb !important;
-    border: 1px solid #d8e2ec;
-    border-radius: 2pt;
-  }
-
-  /* -- Diagnosis Item -- */
-  .diag-item {
-    page-break-inside: avoid;
-    border: 1px solid #d8e2ec;
-    border-radius: 4pt;
-    margin-bottom: 4mm;
-    overflow: hidden;
-  }
-
-  .diag-item-header {
-    background: #f4f7fb !important;
-    padding: 2.5mm 4mm;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #d8e2ec;
-  }
-
-  .diag-item-code { font-size: 8pt; font-weight: 700; color: #4a90d9; }
-  .diag-item-name { font-size: 9pt; font-weight: 600; color: #0a1628; }
-
-  .diag-item-body { padding: 3mm 4mm; }
-
-  .diag-observation { font-size: 8.5pt; color: #4a6a8a; margin-bottom: 2mm; }
-  .diag-judgment { font-size: 8pt; color: #4a6a8a; font-style: italic; }
-
-  /* -- Page Footer (페이지 내 하단 고정) -- */
   .rpt-footer {
     position: absolute;
-    bottom: 10mm;
+    bottom: 8mm;
     left: 15mm;
     right: 15mm;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 0.5pt solid #d8e2ec;
-    padding-top: 2mm;
-    font-size: 7.5pt;
-    color: #4a6a8a;
+    border-top: 0.4pt solid #d8e2ec;
+    padding-top: 1.5mm;
+    font-size: 7pt;
+    color: #4a6a8a !important;
   }
 
-  /* -- Page Counter -- */
-  body { counter-reset: page; }
-  .report-page { counter-increment: page; }
+  /* ──────────────────────────────────
+     표 스타일
+     ────────────────────────────────── */
+  .info-table, .checklist-table, .fixed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-bottom: 3mm;
+  }
+  .info-table th, .checklist-table th {
+    background: #4a90d9 !important;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 2mm 3mm;
+    text-align: left;
+    font-size: 7.5pt;
+  }
+  .info-table td, .checklist-table td {
+    padding: 2mm 3mm;
+    border-bottom: 0.3pt solid #d8e2ec;
+  }
+  .info-table .label-cell {
+    color: #4a6a8a !important;
+    font-weight: 600;
+    font-size: 8pt;
+    width: 25%;
+    background: #f8fafc !important;
+  }
 
-  /* -- Avoid breaks -- */
-  .card, .diag-item, .photo-item { page-break-inside: avoid; }
-  .info-table, .checklist-table, .sj-table, .criteria-table { page-break-inside: avoid; }
-  .diag-card { page-break-inside: avoid; }
-  .photo-grid { page-break-inside: avoid; }
-  h1, h2, h3, .rpt-section-title, .rpt-page-title { page-break-after: avoid; }
-  .summary-overall { page-break-inside: avoid; }
-  .expert-box { page-break-inside: avoid; }
+  /* ── 판정 뱃지 ── */
+  .status-badge {
+    display: inline-block;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 0.8mm 2.5mm;
+    border-radius: 20pt;
+  }
+  .status-badge.good { background: #f0fff4 !important; color: #27ae60 !important; }
+  .status-badge.normal { background: #fff8e1 !important; color: #e67e22 !important; }
+  .status-badge.bad { background: #fff8e1 !important; color: #d35400 !important; }
+  .status-badge.danger { background: #fff0f0 !important; color: #c0392b !important; }
+  .status-badge.na { background: #f4f7fb !important; color: #7a8fa3 !important; }
 
-  /* 표지/간지는 단독 페이지 */
-  .cover-page, .divider-page { page-break-after: always; }
+  /* ── 판정 기준 테이블 ── */
+  .criteria-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 3mm; }
+  .criteria-table th { background: #f4f7fb !important; padding: 2mm 3mm; font-weight: 600; border-bottom: 0.5pt solid #d8e2ec; text-align: left; }
+  .criteria-table td { padding: 1.5mm 3mm; border-bottom: 0.3pt solid #eef2f7; }
+  .criteria-badge { display: inline-block; padding: 0.5mm 2.5mm; border-radius: 20pt; font-size: 7pt; font-weight: 700; }
+
+  /* ──────────────────────────────────
+     사진 그리드
+     ────────────────────────────────── */
+  .photo-grid {
+    display: grid;
+    gap: 2mm;
+    margin: 2mm 0 3mm;
+  }
+  .photo-grid[data-cols="1"] { grid-template-columns: 1fr; }
+  .photo-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+  .photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
+  .photo-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
+  .photo-grid[data-cols="6"] { grid-template-columns: 1fr 1fr 1fr; }
+  .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr; }
+
+  .photo-cell img {
+    width: 100%;
+    height: auto;
+    max-height: 50mm;
+    object-fit: cover;
+    border: 0.3pt solid #d8e2ec;
+    border-radius: 1.5pt;
+    display: block;
+  }
+  .photo-cell-caption {
+    font-size: 7pt;
+    color: #4a6a8a !important;
+    text-align: center;
+    padding: 0.5mm 1mm;
+    background: #f8fafc !important;
+    margin-top: 0.5mm;
+  }
+
+  /* ──────────────────────────────────
+     진단 카드
+     ────────────────────────────────── */
+  .diag-card {
+    border: 0.5pt solid #d8e2ec;
+    border-radius: 3pt;
+    margin-bottom: 3mm;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .diag-card-header {
+    background: #f4f7fb !important;
+    padding: 2mm 3mm;
+    border-bottom: 0.3pt solid #d8e2ec;
+  }
+  .diag-card-title { font-size: 9pt; font-weight: 700; color: #0a1628 !important; }
+  .diag-card-body { padding: 2.5mm 3mm; }
+  .diag-label { font-size: 8pt; font-weight: 600; color: #4a90d9 !important; margin: 2mm 0 1mm; }
+  .diag-text { font-size: 8.5pt; color: #4a6a8a !important; line-height: 1.5; margin-bottom: 2mm; white-space: pre-wrap; }
+
+  /* ── 세부판정 테이블 ── */
+  .sj-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 2mm;
+  }
+  .sj-table th {
+    background: #f4f7fb !important;
+    padding: 1.5mm 3mm;
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 0.5pt solid #d8e2ec;
+  }
+  .sj-table td {
+    padding: 1.5mm 3mm;
+    border-bottom: 0.3pt solid #eef2f7;
+  }
+
+  /* ──────────────────────────────────
+     종합판단 전용
+     ────────────────────────────────── */
+  .summary-overall {
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    padding: 3mm 4mm;
+    background: #f4f7fb !important;
+    border: 0.5pt solid #d8e2ec;
+    border-radius: 3pt;
+    margin-bottom: 4mm;
+    page-break-inside: avoid;
+  }
+  .overall-label { font-size: 9pt; font-weight: 700; color: #0a1628 !important; }
+
+  /* ── 전문가 의견 박스 ── */
+  .expert-box {
+    border: 0.5pt solid #d8e2ec;
+    border-radius: 3pt;
+    padding: 3mm 4mm;
+    margin-bottom: 3mm;
+    page-break-inside: avoid;
+  }
+  .expert-box-title { font-size: 9pt; font-weight: 700; color: #4a90d9 !important; margin-bottom: 2mm; }
+  .expert-box-text { font-size: 8.5pt; color: #4a6a8a !important; line-height: 1.6; white-space: pre-wrap; }
+
+  /* ──────────────────────────────────
+     Page Break 규칙 (핵심)
+     ────────────────────────────────── */
+
+  /* 카드 단위로 분리 금지 — 카드 전체가 다음 페이지로 */
+  .diag-card,
+  .expert-box,
+  .summary-overall,
+  .photo-grid {
+    page-break-inside: avoid;
+  }
+
+  /* 표 단위로 분리 금지 */
+  .info-table,
+  .checklist-table,
+  .sj-table,
+  .criteria-table,
+  .cover-info-table {
+    page-break-inside: avoid;
+  }
+
+  /* 제목 뒤에서 끊기지 않도록 */
+  .rpt-page-title,
+  .rpt-section-title,
+  .diag-card-header,
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  /* 표지/간지는 반드시 단독 페이지 */
+  .cover-page,
+  .divider-page {
+    page-break-after: always;
+    page-break-before: auto;
+  }
+
+  /* ──────────────────────────────────
+     기타
+     ────────────────────────────────── */
+  .empty-text { font-size: 8pt; color: #aab8c2 !important; font-style: italic; }
+
+  /* 빈 페이지 숨기기용 (내용 없는 마지막 페이지) */
+  .report-page:empty { display: none; }
 }
