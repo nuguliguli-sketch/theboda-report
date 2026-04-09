@@ -29,7 +29,7 @@
       border-radius: 4px;
       margin: 0 auto 24px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-      padding: 20mm 18mm;
+      padding: 20mm 18mm 28mm;
       position: relative;
       box-sizing: border-box;
     }
@@ -466,14 +466,17 @@
     .priority-item:last-child { border-bottom: none; }
     .priority-num { font-weight: 700; color: #4a90d9; min-width: 20px; }
 
-    /* 페이지 풋터 */
+    /* 페이지 풋터 (하단 고정) */
     .rpt-footer {
+      position: absolute;
+      bottom: 18mm;
+      left: 18mm;
+      right: 18mm;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-top: 1px solid #d8e2ec;
-      padding-top: 8px;
-      margin-top: 20px;
+      padding-top: 6px;
       font-size: 9px;
       color: #4a6a8a;
     }

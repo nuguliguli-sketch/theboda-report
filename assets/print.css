@@ -81,7 +81,7 @@
   .report-page {
     width: 210mm;
     min-height: 297mm;
-    padding: 15mm;
+    padding: 15mm 15mm 22mm;
     background: #fff;
     page-break-after: always;
     position: relative;
@@ -318,23 +318,19 @@
   .diag-observation { font-size: 8.5pt; color: #4a6a8a; margin-bottom: 2mm; }
   .diag-judgment { font-size: 8pt; color: #4a6a8a; font-style: italic; }
 
-  /* -- Page Footer -- */
+  /* -- Page Footer (페이지 내 하단 고정) -- */
   .rpt-footer {
-    position: fixed;
-    bottom: 8mm;
+    position: absolute;
+    bottom: 10mm;
     left: 15mm;
     right: 15mm;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #d8e2ec;
+    border-top: 0.5pt solid #d8e2ec;
     padding-top: 2mm;
     font-size: 7.5pt;
     color: #4a6a8a;
-  }
-
-  .rpt-footer .page-num::after {
-    content: counter(page) " / " counter(pages);
   }
 
   /* -- Page Counter -- */
