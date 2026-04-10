@@ -18,6 +18,70 @@
       opacity: 0.5;
       transition: opacity 0.3s;
     }
+    /* 클라우드 저장 상태 배지 (사이드바) */
+    .cloud-status-badge {
+      font-size: 10px;
+      padding: 4px 8px 6px 32px;
+      margin: -2px 0 6px 0;
+      border-left: 2px solid transparent;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.3;
+      transition: all 0.3s;
+    }
+    .cloud-status-badge.fresh {
+      color: var(--status-good);
+      border-left-color: var(--status-good);
+    }
+    .cloud-status-badge.stale {
+      color: var(--status-medium);
+      border-left-color: var(--status-medium);
+    }
+    .cloud-status-badge.danger {
+      color: var(--status-danger);
+      border-left-color: var(--status-danger);
+      background: rgba(239, 68, 68, 0.08);
+      animation: cloud-pulse 2s ease-in-out infinite;
+    }
+    .cloud-status-badge.saving {
+      color: var(--primary-light);
+      border-left-color: var(--primary-light);
+    }
+    @keyframes cloud-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    /* 탑바 클라우드 저장 mini 배지 */
+    .cloud-mini-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.3s;
+    }
+    .cloud-mini-badge.fresh {
+      color: var(--status-good);
+      border-color: var(--status-good);
+    }
+    .cloud-mini-badge.stale {
+      color: var(--status-medium);
+      border-color: var(--status-medium);
+    }
+    .cloud-mini-badge.danger {
+      color: var(--status-danger);
+      border-color: var(--status-danger);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .cloud-mini-badge.saving {
+      color: var(--primary-light);
+      border-color: var(--primary-light);
+    }
     .section-nav {
       display: flex;
       gap: 8px;
@@ -876,13 +940,16 @@
       </div>
       <div class="nav-group">
         <div class="nav-group-label">클라우드 동기화</div>
-        <div class="nav-item" onclick="cloudSaveAction()" title="현재 보고서를 GitHub Gist에 저장 (다른 PC에서 이어서 작업 가능)">
+        <div class="nav-item" onclick="cloudSaveAction()" title="현재 보고서를 클라우드(S3)에 저장 (다른 PC에서 이어서 작업 가능)">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 15a4 4 0 004 4h10a5 5 0 001-9.9A7 7 0 004.7 9.1"/>
             <polyline points="12 12 12 20 8 16"/>
             <line x1="12" y1="20" x2="16" y2="16"/>
           </svg>
           ☁ 클라우드 저장
+        </div>
+        <div id="cloud-status-badge" class="cloud-status-badge" title="마지막 클라우드 저장 시각">
+          <span id="cloud-status-text">상태 확인 중...</span>
         </div>
         <div class="nav-item" onclick="cloudLoadAction()" title="클라우드에서 이전 보고서 불러오기">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -937,6 +1004,10 @@
       <div class="topbar-title">보고서 입력</div>
       <div class="input-header-actions">
         <div id="autosave-indicator" class="autosave-indicator" style="font-size:11px; color:var(--text-muted); opacity:0.5; transition:all 0.3s">-</div>
+        <div id="cloud-mini-badge" class="cloud-mini-badge" title="마지막 클라우드 저장 시각 (클릭하면 지금 저장)" onclick="cloudSaveAction()" style="cursor:pointer">
+          <span>☁</span>
+          <span id="cloud-mini-text">-</span>
+        </div>
         <div id="progress-text" style="font-size:12px; color:var(--text-muted)">입력 0%</div>
         <button class="btn btn-secondary btn-sm" onclick="saveDraft()" id="save-btn" style="display:flex;align-items:center;gap:4px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -2668,9 +2739,11 @@ async function doCloudSave() {
   if (statusEl) statusEl.textContent = '준비 중...';
 
   try {
+    setCloudStatusSaving();
     const result = await CloudS3.save((msg) => {
       if (statusEl) statusEl.textContent = msg;
     });
+    clearCloudStatusSaving();
     closeCloudModal();
     Report.showToast(`클라우드 저장 완료 (사진 ${result.photoCount}장)`, 'success', 4000);
     // 저장된 ID 표시
@@ -2687,6 +2760,7 @@ async function doCloudSave() {
       `);
     }, 300);
   } catch (err) {
+    clearCloudStatusSaving();
     if (btn) btn.disabled = false;
     if (statusEl) statusEl.textContent = '오류: ' + err.message;
     Report.showToast('저장 실패: ' + err.message, 'error', 6000);
@@ -2788,6 +2862,7 @@ async function doCloudLoad(reportId) {
 
     closeCloudModal();
     Report.showToast(`불러오기 완료 (사진 ${result.imageCount}장)`, 'success');
+    updateCloudStatusBadge();
   } catch (err) {
     Report.showToast('불러오기 실패: ' + err.message, 'error', 6000);
     console.error('Cloud load error:', err);
@@ -2889,7 +2964,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calcDurabilityFromYear();
   }
 
-  // 자동저장 (30초마다 조용히 저장)
+  // 자동저장 (30초마다 조용히 localStorage 저장)
   setInterval(() => saveDraft(true), 30000);
 
   // Ctrl+S 단축키
@@ -2912,11 +2987,161 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   calcRepairCostTotal();
 
-  // 페이지 떠나기 전 자동저장
-  window.addEventListener('beforeunload', () => {
+  // ==========================================
+  // 클라우드 저장 상태 업데이트 + 자동 클라우드 저장
+  // ==========================================
+  updateCloudStatusBadge();
+  setInterval(updateCloudStatusBadge, 30000); // 30초마다 상태 배지 갱신 ("N분 전" 표시용)
+
+  // 자동 클라우드 저장 (5분마다 dirty일 때만)
+  setInterval(autoCloudSave, 5 * 60 * 1000);
+
+  // 페이지 떠나기 전 경고 (localStorage 저장 + 미저장 클라우드 변경 경고)
+  window.addEventListener('beforeunload', (e) => {
     saveDraft(true);
+    // 클라우드 미저장 변경사항 있으면 경고
+    try {
+      if (typeof CloudS3 !== 'undefined' && CloudS3.isDirty && CloudS3.isDirty()) {
+        const msg = '클라우드에 저장되지 않은 변경사항이 있습니다. 정말 나가시겠습니까?';
+        e.preventDefault();
+        e.returnValue = msg;
+        return msg;
+      }
+    } catch (_) {}
   });
 });
+
+// ==========================================
+// 클라우드 저장 상태 배지 관리
+// ==========================================
+function formatRelativeTime(isoString) {
+  if (!isoString) return null;
+  const diff = Date.now() - new Date(isoString).getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return '방금';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  return `${day}일 전`;
+}
+
+function getCloudStatusLevel(ageMin, isDirty, neverSaved) {
+  // fresh: 5분 이하 + 변경 없음
+  // saving: 저장 중 (별도 처리)
+  // stale: 5~15분 또는 dirty
+  // danger: 15분 이상 + dirty, 또는 한 번도 저장 안 됨
+  if (neverSaved) return 'danger';
+  if (ageMin >= 15 && isDirty) return 'danger';
+  if (ageMin >= 5 || isDirty) return 'stale';
+  return 'fresh';
+}
+
+function updateCloudStatusBadge() {
+  try {
+    const badge = document.getElementById('cloud-status-badge');
+    const text = document.getElementById('cloud-status-text');
+    const miniBadge = document.getElementById('cloud-mini-badge');
+    const miniText = document.getElementById('cloud-mini-text');
+    if (!badge || !text || !miniBadge || !miniText) return;
+
+    // 저장 중일 때는 건드리지 않음 (setCloudStatusSaving이 관리)
+    if (badge.dataset.saving === '1') return;
+
+    const report = Report.load();
+    const reportId = report && report.meta && report.meta.id;
+    if (!reportId) return;
+
+    const last = (typeof CloudS3 !== 'undefined' && CloudS3.getLastCloudSaveInfo)
+      ? CloudS3.getLastCloudSaveInfo(reportId)
+      : null;
+    const dirty = (typeof CloudS3 !== 'undefined' && CloudS3.isDirty) ? CloudS3.isDirty() : true;
+
+    if (!last) {
+      // 한 번도 클라우드 저장 안 됨
+      const level = 'danger';
+      badge.className = `cloud-status-badge ${level}`;
+      text.textContent = '⚠ 아직 클라우드 미저장';
+      miniBadge.className = `cloud-mini-badge ${level}`;
+      miniText.textContent = '미저장';
+      return;
+    }
+
+    const ageMs = Date.now() - new Date(last.time).getTime();
+    const ageMin = Math.floor(ageMs / 60000);
+    const rel = formatRelativeTime(last.time) || '?';
+    const level = getCloudStatusLevel(ageMin, dirty, false);
+
+    badge.className = `cloud-status-badge ${level}`;
+    miniBadge.className = `cloud-mini-badge ${level}`;
+
+    const icon = level === 'fresh' ? '✓' : level === 'danger' ? '⚠' : '○';
+    const suffix = dirty ? ' · 변경됨' : '';
+    text.textContent = `${icon} 클라우드: ${rel}${suffix}`;
+    miniText.textContent = dirty ? `${rel}·변경` : rel;
+  } catch (_) {}
+}
+
+function setCloudStatusSaving() {
+  const badge = document.getElementById('cloud-status-badge');
+  const text = document.getElementById('cloud-status-text');
+  const miniBadge = document.getElementById('cloud-mini-badge');
+  const miniText = document.getElementById('cloud-mini-text');
+  if (!badge || !text || !miniBadge || !miniText) return;
+  badge.dataset.saving = '1';
+  badge.className = 'cloud-status-badge saving';
+  text.textContent = '↑ 클라우드 저장 중...';
+  miniBadge.className = 'cloud-mini-badge saving';
+  miniText.textContent = '저장중';
+}
+
+function clearCloudStatusSaving() {
+  const badge = document.getElementById('cloud-status-badge');
+  if (badge) delete badge.dataset.saving;
+  updateCloudStatusBadge();
+}
+
+// ==========================================
+// 자동 클라우드 저장 (5분마다, dirty일 때만)
+// ==========================================
+let __autoCloudSaveInFlight = false;
+async function autoCloudSave() {
+  if (__autoCloudSaveInFlight) return; // 중복 실행 방지
+  try {
+    if (typeof CloudS3 === 'undefined' || !CloudS3.isDirty || !CloudS3.save) return;
+
+    // 현재 폼의 최신 데이터를 먼저 localStorage에 반영
+    const data = Report.collectForm();
+    Report.save(data);
+
+    // dirty 체크 — 변경 없으면 스킵 (네트워크/S3 호출 아끼기)
+    if (!CloudS3.isDirty()) return;
+
+    __autoCloudSaveInFlight = true;
+    setCloudStatusSaving();
+
+    const result = await CloudS3.save({
+      silent: true,
+      skipExistingPhotos: true, // 기존 사진은 재업로드 스킵
+    });
+
+    clearCloudStatusSaving();
+    console.log(`[자동 클라우드 저장] 완료 (신규 사진 ${result.photoCount}장, 스킵 ${result.skippedCount || 0}장)`);
+  } catch (err) {
+    console.error('[자동 클라우드 저장] 실패:', err);
+    clearCloudStatusSaving();
+    // 실패는 조용히 — 사용자 작업 방해하지 않음. 배지 색상(danger)이 경고 역할.
+    const badge = document.getElementById('cloud-status-badge');
+    const text = document.getElementById('cloud-status-text');
+    if (badge && text) {
+      badge.className = 'cloud-status-badge danger';
+      text.textContent = '⚠ 자동저장 실패 — 네트워크 확인';
+    }
+  } finally {
+    __autoCloudSaveInFlight = false;
+  }
+}
 </script>
 </body>
 </html>

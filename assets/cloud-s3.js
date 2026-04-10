@@ -24,7 +24,70 @@
     prefix: 'reports/',
   };
 
+  const LAST_SAVE_KEY_PREFIX = 'theboda_last_cloud_save_';
+
   let s3Client = null;
+
+  // ==========================================
+  // 해시 / 메타데이터 유틸
+  // ==========================================
+  // 빠른 문자열 해시 (djb2 변형)
+  function hashString(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  // 보고서 내용 해시 (타임스탬프 제외하여 실제 내용 변경만 감지)
+  function getReportHash(report) {
+    if (!report) return '';
+    const clone = JSON.parse(JSON.stringify(report));
+    if (clone.meta) {
+      delete clone.meta.updatedAt;
+      delete clone.meta.createdAt;
+    }
+    return hashString(JSON.stringify(clone));
+  }
+
+  function getLastCloudSaveInfo(reportId) {
+    if (!reportId) return null;
+    try {
+      const raw = localStorage.getItem(LAST_SAVE_KEY_PREFIX + reportId);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function setLastCloudSaveInfo(reportId, info) {
+    if (!reportId) return;
+    try {
+      localStorage.setItem(LAST_SAVE_KEY_PREFIX + reportId, JSON.stringify(info));
+    } catch (_) {}
+  }
+
+  function clearLastCloudSaveInfo(reportId) {
+    if (!reportId) return;
+    try {
+      localStorage.removeItem(LAST_SAVE_KEY_PREFIX + reportId);
+    } catch (_) {}
+  }
+
+  // 현재 활성 보고서가 마지막 클라우드 저장 이후 변경되었는지 확인
+  function isDirty() {
+    try {
+      const report = Report.load();
+      if (!report || !report.meta || !report.meta.id) return false;
+      const last = getLastCloudSaveInfo(report.meta.id);
+      if (!last) return true; // 한 번도 저장 안 됨 = dirty
+      return getReportHash(report) !== last.hash;
+    } catch (_) {
+      return false;
+    }
+  }
 
   // ==========================================
   // S3 클라이언트 초기화
@@ -90,8 +153,17 @@
 
   // ==========================================
   // 저장
+  // options: { onProgress, silent, skipExistingPhotos }
+  //   - skipExistingPhotos: true면 이미 S3에 있는 사진은 재업로드 스킵 (자동저장용)
   // ==========================================
-  async function cloudSave(onProgress) {
+  async function cloudSave(optionsOrOnProgress) {
+    // 하위호환: 함수 하나만 넘어오면 onProgress로 해석
+    const options =
+      typeof optionsOrOnProgress === 'function'
+        ? { onProgress: optionsOrOnProgress }
+        : optionsOrOnProgress || {};
+    const { onProgress, skipExistingPhotos = false } = options;
+
     await ensureCredentials();
     const s3 = getS3();
 
@@ -104,7 +176,7 @@
 
     const photoIds = collectPhotoIds(report);
 
-    // 현재 S3에 있는 이미지 목록 조회 (삭제된 것 정리용)
+    // 현재 S3에 있는 이미지 목록 조회 (삭제된 것 정리 + 중복 업로드 회피)
     let existingImageKeys = new Set();
     try {
       const listResp = await s3
@@ -128,17 +200,25 @@
       })
       .promise();
 
-    // 2) 사진들 업로드
+    // 2) 사진 업로드 — skipExistingPhotos면 이미 S3에 있는 건 건너뜀
     const uploadedKeys = new Set();
     let uploadedCount = 0;
+    let skippedCount = 0;
     for (const id of photoIds) {
-      const base64 = await Report.ImageStore.get(id);
-      if (!base64) continue;
       const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '_');
       const key = `${AWS_CONFIG.prefix}${reportId}/images/${safeId}.txt`;
       uploadedKeys.add(key);
+
+      // 사진은 ID로 식별되므로 이미 올라간 것은 동일한 내용 -> 업로드 스킵
+      if (skipExistingPhotos && existingImageKeys.has(key)) {
+        skippedCount++;
+        continue;
+      }
+
+      const base64 = await Report.ImageStore.get(id);
+      if (!base64) continue;
       uploadedCount++;
-      if (onProgress) onProgress(`사진 업로드 중 (${uploadedCount}/${photoIds.length})...`);
+      if (onProgress) onProgress(`사진 업로드 중 (${uploadedCount}/${photoIds.length - skippedCount})...`);
       await s3
         .putObject({
           Key: key,
@@ -164,9 +244,16 @@
       } catch (_) {}
     }
 
+    // 4) 마지막 클라우드 저장 메타데이터 기록 (dirty 판정용)
+    setLastCloudSaveInfo(reportId, {
+      time: new Date().toISOString(),
+      hash: getReportHash(report),
+    });
+
     return {
       reportId,
       photoCount: uploadedCount,
+      skippedCount,
     };
   }
 
@@ -229,6 +316,12 @@
     report.meta = report.meta || {};
     report.meta.id = reportId;
     Report.save(report);
+
+    // 방금 클라우드에서 불러온 상태 = 클라우드와 로컬이 동기화된 상태
+    setLastCloudSaveInfo(reportId, {
+      time: new Date().toISOString(),
+      hash: getReportHash(report),
+    });
 
     return { reportId, imageCount };
   }
@@ -311,6 +404,9 @@
       })
       .promise();
 
+    // 로컬의 마지막 저장 메타데이터도 정리
+    clearLastCloudSaveInfo(reportId);
+
     return { deleted: keys.length };
   }
 
@@ -333,5 +429,9 @@
     delete: cloudDelete,
     getCurrentCloudId,
     ensureCredentials,
+    // 자동저장 + dirty 감지용
+    isDirty,
+    getReportHash,
+    getLastCloudSaveInfo,
   };
 })();
