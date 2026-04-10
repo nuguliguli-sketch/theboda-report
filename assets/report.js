@@ -1218,6 +1218,8 @@ function collectFormData() {
     // opinion
     const opEl = document.getElementById(`cat_opinion_${cat}`);
     if (opEl) cd.opinion = opEl.value;
+    const opToggleEl = document.querySelector(`[data-opinion-toggle="${cat}"]`);
+    if (opToggleEl) cd.opinionEnabled = opToggleEl.checked;
 
     // fixedTables
     if (info.fixedTables) {

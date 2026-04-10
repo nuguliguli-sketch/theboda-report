@@ -1148,8 +1148,8 @@ async function renderReport() {
       `;
     }
 
-    // 종합의견
-    if (cd.opinion && cd.opinion.trim()) {
+    // 종합의견 (opinionEnabled가 false면 렌더링 생략)
+    if (cd.opinionEnabled !== false && cd.opinion && cd.opinion.trim()) {
       catContent += `
         <div class="rpt-section-title">종합의견</div>
         <div style="font-size:10px; color:#4a6a8a; line-height:1.7; white-space:pre-wrap; margin-bottom:12px">${escapeHTML(cd.opinion)}</div>
