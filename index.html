@@ -1350,7 +1350,9 @@
 
 <div id="toast-container" class="toast-container"></div>
 
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1589.0.min.js"></script>
 <script src="assets/report.js"></script>
+<script src="assets/cloud-s3.js"></script>
 <script>
 // ==========================================
 // 탭 순서 배열
@@ -2542,7 +2544,7 @@ function confirmClear() {
 }
 
 // ==========================================
-// 클라우드 모달 & 핸들러
+// 클라우드 모달 & 핸들러 (AWS S3 기반)
 // ==========================================
 function openCloudModal(title, bodyHTML) {
   document.getElementById('cloud-modal-title').textContent = title;
@@ -2553,138 +2555,128 @@ function closeCloudModal() {
   document.getElementById('cloud-modal').style.display = 'none';
 }
 
-// 토큰이 없으면 설정 모달을 먼저 열고 확인 콜백 실행
-function ensureGistToken(onReady) {
-  if (Report.getGistToken()) { onReady(); return; }
-  cloudSettingsAction(onReady);
-}
-
-function cloudSettingsAction(onSaved) {
-  const currentToken = Report.getGistToken();
-  const masked = currentToken ? currentToken.slice(0, 4) + '••••••••' + currentToken.slice(-4) : '';
+function cloudSettingsAction() {
   openCloudModal('클라우드 설정', `
     <div class="cloud-help">
-      <strong>GitHub Personal Access Token</strong>이 필요합니다.<br>
-      아래 링크에서 <strong>Fine-grained token</strong> 또는 <strong>Classic token (gist 권한)</strong>을 발급받으세요.<br>
-      <a href="https://github.com/settings/tokens/new?scopes=gist&description=theboda-report" target="_blank">→ 토큰 발급 페이지 열기 (gist 권한 자동 선택)</a><br>
-      토큰은 이 브라우저에만 저장되며 외부로 전송되지 않습니다.
+      <strong>AWS S3 클라우드 동기화</strong><br>
+      보고서와 사진이 AWS S3에 안전하게 저장됩니다.<br>
+      다른 PC/브라우저에서 <strong>클라우드 불러오기</strong>로 이어서 작업할 수 있습니다.
     </div>
-    <label>GitHub Token ${currentToken ? `<span style="color:var(--text-muted);font-weight:400">(현재: ${masked})</span>` : ''}</label>
-    <input type="password" id="gist-token-input" placeholder="ghp_... 또는 github_pat_..." value="${currentToken ? '' : ''}">
+    <label>저장 위치</label>
+    <input type="text" value="s3://${CloudS3.config.bucket}/${CloudS3.config.prefix}" readonly>
+    <label style="margin-top:12px">리전</label>
+    <input type="text" value="${CloudS3.config.region} (서울)" readonly>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.6">
+      ✓ Cognito Identity Pool로 임시 자격증명 사용 (보안)<br>
+      ✓ reports/ 폴더 외에는 접근 불가 (권한 제한)<br>
+      ✓ 사진은 개별 파일로 저장 (용량 제한 없음)
+    </div>
     <div class="cloud-modal-actions">
-      ${currentToken ? '<button class="btn btn-ghost btn-sm" onclick="cloudTokenClear()">토큰 삭제</button>' : ''}
-      <button class="btn btn-secondary btn-sm" onclick="closeCloudModal()">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="cloudTokenSave()">저장</button>
+      <button class="btn btn-primary btn-sm" onclick="closeCloudModal()">확인</button>
     </div>
   `);
-  window.__cloudOnTokenSaved = onSaved || null;
-}
-function cloudTokenSave() {
-  const val = document.getElementById('gist-token-input').value.trim();
-  if (!val) { Report.showToast('토큰을 입력해주세요', 'error'); return; }
-  Report.setGistToken(val);
-  closeCloudModal();
-  Report.showToast('토큰이 저장되었습니다', 'success');
-  if (window.__cloudOnTokenSaved) {
-    const cb = window.__cloudOnTokenSaved;
-    window.__cloudOnTokenSaved = null;
-    setTimeout(cb, 100);
-  }
-}
-function cloudTokenClear() {
-  if (!confirm('저장된 토큰을 삭제하시겠습니까?')) return;
-  Report.setGistToken('');
-  closeCloudModal();
-  Report.showToast('토큰이 삭제되었습니다', 'success');
 }
 
 function cloudSaveAction() {
-  ensureGistToken(async () => {
-    const existingId = Report.getGistId();
-    openCloudModal('클라우드 저장', `
-      ${existingId ? `<div class="cloud-status-bar">✓ 기존 Gist에 업데이트됩니다 (ID: ${existingId.slice(0, 8)}...)</div>` : '<div class="cloud-help">새 Gist가 생성됩니다.</div>'}
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">현재 보고서와 사진을 GitHub Gist에 업로드합니다. 잠시 걸릴 수 있습니다.</div>
-      <div class="cloud-modal-actions">
-        ${existingId ? '<button class="btn btn-ghost btn-sm" onclick="doCloudSave(true)">새 Gist로 저장</button>' : ''}
-        <button class="btn btn-secondary btn-sm" onclick="closeCloudModal()">취소</button>
-        <button class="btn btn-primary btn-sm" onclick="doCloudSave(false)">${existingId ? '업데이트' : '저장'}</button>
-      </div>
-      <div id="cloud-save-status" style="margin-top:12px;font-size:11px;color:var(--text-muted)"></div>
-    `);
-  });
+  const currentId = CloudS3.getCurrentCloudId();
+  const isExisting = currentId && currentId.startsWith('rpt_');
+  openCloudModal('클라우드 저장', `
+    ${isExisting ? `<div class="cloud-status-bar">✓ 기존 보고서에 업데이트됩니다 (ID: ${currentId.slice(0, 16)}...)</div>` : '<div class="cloud-help">새 보고서로 저장됩니다.</div>'}
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">현재 보고서와 사진을 AWS S3에 업로드합니다. 사진 개수에 따라 시간이 걸릴 수 있습니다.</div>
+    <div class="cloud-modal-actions">
+      <button class="btn btn-secondary btn-sm" onclick="closeCloudModal()">취소</button>
+      <button class="btn btn-primary btn-sm" id="cloud-save-btn" onclick="doCloudSave()">${isExisting ? '업데이트' : '저장'}</button>
+    </div>
+    <div id="cloud-save-status" style="margin-top:12px;font-size:11px;color:var(--text-muted)"></div>
+  `);
 }
-async function doCloudSave(newGist) {
+async function doCloudSave() {
   // 현재 폼 데이터 먼저 저장
-  if (typeof collectAndSave === 'function') collectAndSave();
-  else if (typeof saveDraft === 'function') saveDraft(true);
+  if (typeof saveDraft === 'function') saveDraft(true);
 
+  const btn = document.getElementById('cloud-save-btn');
   const statusEl = document.getElementById('cloud-save-status');
-  if (statusEl) statusEl.textContent = '업로드 중...';
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = '준비 중...';
+
   try {
-    const result = await Report.cloudSave({ newGist });
+    const result = await CloudS3.save((msg) => {
+      if (statusEl) statusEl.textContent = msg;
+    });
     closeCloudModal();
     Report.showToast(`클라우드 저장 완료 (사진 ${result.photoCount}장)`, 'success', 4000);
-    // 공유 가능한 ID 표시
+    // 저장된 ID 표시
     setTimeout(() => {
       openCloudModal('저장 완료', `
-        <div class="cloud-status-bar">✓ Gist에 저장되었습니다</div>
-        <label>Gist ID (다른 PC에서 이 ID로 불러올 수 있습니다)</label>
-        <input type="text" id="saved-gist-id" value="${result.id}" readonly onclick="this.select()">
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px">위 ID를 복사해서 다른 PC/동료에게 전달하세요.</div>
+        <div class="cloud-status-bar">✓ AWS S3에 저장되었습니다</div>
+        <label>보고서 ID (다른 PC에서 이 ID로 불러올 수 있습니다)</label>
+        <input type="text" id="saved-report-id" value="${result.reportId}" readonly onclick="this.select()">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px">위 ID를 복사해서 다른 PC/동료에게 전달하세요. 또는 다른 PC에서 <strong>클라우드 불러오기</strong> 목록에서 자동으로 찾을 수 있습니다.</div>
         <div class="cloud-modal-actions">
-          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${result.id}').then(()=>Report.showToast('복사됨','success'))">ID 복사</button>
+          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${result.reportId}').then(()=>Report.showToast('복사됨','success'))">ID 복사</button>
           <button class="btn btn-primary btn-sm" onclick="closeCloudModal()">확인</button>
         </div>
       `);
     }, 300);
   } catch (err) {
+    if (btn) btn.disabled = false;
     if (statusEl) statusEl.textContent = '오류: ' + err.message;
-    Report.showToast('저장 실패: ' + err.message, 'error', 5000);
+    Report.showToast('저장 실패: ' + err.message, 'error', 6000);
+    console.error('Cloud save error:', err);
   }
 }
 
 function cloudLoadAction() {
-  ensureGistToken(async () => {
-    const existingId = Report.getGistId();
-    openCloudModal('클라우드 불러오기', `
-      ${existingId ? `<div class="cloud-status-bar">현재 연결된 Gist: ${existingId.slice(0, 8)}...</div>` : ''}
-      <label>Gist ID 또는 URL</label>
-      <input type="text" id="gist-load-id" placeholder="Gist ID 또는 https://gist.github.com/..." value="${existingId}">
-      <div class="cloud-modal-actions">
-        <button class="btn btn-secondary btn-sm" onclick="closeCloudModal()">취소</button>
-        <button class="btn btn-primary btn-sm" onclick="doCloudLoad()">불러오기</button>
-      </div>
-      <div style="margin-top:16px;font-size:11px;color:var(--text-muted)">또는 내 최근 보고서에서 선택:</div>
-      <div id="my-gists-list" style="margin-top:8px">
-        <div style="font-size:11px;color:var(--text-muted)">목록 불러오는 중...</div>
-      </div>
-    `);
-    // 내 gist 목록 로드
-    try {
-      const list = await Report.cloudListMyReports();
-      const listEl = document.getElementById('my-gists-list');
-      if (!listEl) return;
-      if (list.length === 0) {
-        listEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">저장된 보고서가 없습니다</div>';
-        return;
-      }
-      listEl.innerHTML = list.map(g => `
-        <div class="cloud-list-item" onclick="document.getElementById('gist-load-id').value='${g.id}'; doCloudLoad();">
-          <div>
-            <div class="cloud-list-desc">${escapeHTML(g.description || '(설명 없음)')}</div>
-            <div class="cloud-list-meta">${new Date(g.updatedAt).toLocaleString('ko-KR')} · ${g.fileCount}개 파일</div>
-          </div>
-        </div>
-      `).join('');
-    } catch (err) {
-      const listEl = document.getElementById('my-gists-list');
-      if (listEl) listEl.innerHTML = `<div style="font-size:11px;color:var(--status-danger)">목록 로드 실패: ${err.message}</div>`;
-    }
-  });
+  const currentId = CloudS3.getCurrentCloudId();
+  openCloudModal('클라우드 불러오기', `
+    ${currentId && currentId.startsWith('rpt_') ? `<div class="cloud-status-bar">현재 연결된 보고서: ${currentId.slice(0, 16)}...</div>` : ''}
+    <label>보고서 ID (직접 입력)</label>
+    <input type="text" id="cloud-load-id" placeholder="rpt_..." value="">
+    <div class="cloud-modal-actions" style="margin-top:8px">
+      <button class="btn btn-secondary btn-sm" onclick="closeCloudModal()">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="doCloudLoad(document.getElementById('cloud-load-id').value.trim())">이 ID로 불러오기</button>
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:var(--text-muted);padding-top:12px;border-top:1px solid var(--border)">또는 클라우드에 저장된 보고서 목록에서 선택:</div>
+    <div id="cloud-report-list" style="margin-top:10px">
+      <div style="font-size:11px;color:var(--text-muted)">목록 불러오는 중...</div>
+    </div>
+  `);
+  // 보고서 목록 로드
+  loadCloudReportList();
 }
-async function doCloudLoad() {
-  const gistId = document.getElementById('gist-load-id').value.trim();
-  if (!gistId) { Report.showToast('Gist ID를 입력해주세요', 'error'); return; }
+
+async function loadCloudReportList() {
+  try {
+    const list = await CloudS3.list();
+    const listEl = document.getElementById('cloud-report-list');
+    if (!listEl) return;
+    if (list.length === 0) {
+      listEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">클라우드에 저장된 보고서가 없습니다</div>';
+      return;
+    }
+    listEl.innerHTML = list.map(r => {
+      const date = new Date(r.updatedAt || r.lastModified).toLocaleString('ko-KR');
+      const title = [r.address, r.unit].filter(Boolean).join(' ') || '(주소 미입력)';
+      const sub = [r.clientName && `의뢰인: ${r.clientName}`, r.reportNo && `번호: ${r.reportNo}`].filter(Boolean).join(' · ');
+      return `
+        <div class="cloud-list-item" onclick="doCloudLoad('${r.id}')">
+          <div style="flex:1">
+            <div class="cloud-list-desc">${escapeHTML(title)}</div>
+            <div class="cloud-list-meta">${escapeHTML(sub || r.id)} · ${date}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="color:var(--status-danger);padding:4px 8px;font-size:10px" onclick="event.stopPropagation(); doCloudDelete('${r.id}')">삭제</button>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    const listEl = document.getElementById('cloud-report-list');
+    if (listEl) listEl.innerHTML = `<div style="font-size:11px;color:var(--status-danger)">목록 로드 실패: ${escapeHTML(err.message)}</div>`;
+    console.error('Cloud list error:', err);
+  }
+}
+
+async function doCloudLoad(reportId) {
+  if (!reportId) { Report.showToast('보고서 ID를 입력해주세요', 'error'); return; }
 
   const current = Report.load();
   const hasData = current && current.basic && (current.basic.address || current.basic.clientName);
@@ -2692,13 +2684,37 @@ async function doCloudLoad() {
     return;
   }
 
+  // 모달 상태 업데이트
+  openCloudModal('클라우드 불러오기', `
+    <div class="cloud-status-bar">다운로드 중입니다...</div>
+    <div id="cloud-load-status" style="font-size:12px;color:var(--text-secondary);margin-top:8px">준비 중...</div>
+  `);
+
   try {
-    const result = await Report.cloudLoad(gistId);
+    const result = await CloudS3.load(reportId, (msg) => {
+      const el = document.getElementById('cloud-load-status');
+      if (el) el.textContent = msg;
+    });
     closeCloudModal();
     Report.showToast(`불러오기 완료 (사진 ${result.imageCount}장)`, 'success');
     setTimeout(() => location.reload(), 800);
   } catch (err) {
-    Report.showToast('불러오기 실패: ' + err.message, 'error', 5000);
+    Report.showToast('불러오기 실패: ' + err.message, 'error', 6000);
+    console.error('Cloud load error:', err);
+    // 목록 다시 표시
+    setTimeout(() => cloudLoadAction(), 100);
+  }
+}
+
+async function doCloudDelete(reportId) {
+  if (!confirm('이 보고서를 클라우드에서 완전히 삭제합니다. 복구할 수 없습니다.\n계속하시겠습니까?')) return;
+  try {
+    const result = await CloudS3.delete(reportId);
+    Report.showToast(`삭제 완료 (파일 ${result.deleted}개)`, 'success');
+    loadCloudReportList();
+  } catch (err) {
+    Report.showToast('삭제 실패: ' + err.message, 'error');
+    console.error('Cloud delete error:', err);
   }
 }
 
