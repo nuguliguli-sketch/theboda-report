@@ -693,6 +693,185 @@ async function importReportJSON(file, mode = 'overwrite') {
 }
 
 // ==========================================
+// GitHub Gist 동기화 (협업용 클라우드 저장)
+// ==========================================
+const GIST_TOKEN_KEY = 'theboda_gist_token';
+const GIST_ID_KEY = 'theboda_gist_id'; // 현재 보고서와 연결된 gist id
+const GIST_DESCRIPTION_PREFIX = '[theboda-report]';
+
+function getGistToken() {
+  return localStorage.getItem(GIST_TOKEN_KEY) || '';
+}
+function setGistToken(token) {
+  if (token) localStorage.setItem(GIST_TOKEN_KEY, token);
+  else localStorage.removeItem(GIST_TOKEN_KEY);
+}
+function getGistId() {
+  return localStorage.getItem(GIST_ID_KEY) || '';
+}
+function setGistId(id) {
+  if (id) localStorage.setItem(GIST_ID_KEY, id);
+  else localStorage.removeItem(GIST_ID_KEY);
+}
+
+// Gist API 공통 요청
+async function gistRequest(url, options = {}) {
+  const token = getGistToken();
+  if (!token) throw new Error('GitHub 토큰이 설정되지 않았습니다. 클라우드 설정에서 토큰을 입력해주세요.');
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github+json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('인증 실패: 토큰이 유효하지 않습니다 (401)');
+    if (response.status === 403) throw new Error('권한 거부 (403): 토큰에 gist 권한이 있는지 확인하세요');
+    if (response.status === 404) {
+      const err = new Error('Gist를 찾을 수 없습니다 (404)');
+      err.status = 404;
+      throw err;
+    }
+    const errText = await response.text();
+    throw new Error(`GitHub API 오류 (${response.status}): ${errText.slice(0, 200)}`);
+  }
+  return response;
+}
+
+// 클라우드 저장 — 현재 보고서를 Gist로 업로드 (신규 또는 업데이트)
+async function cloudSave({ newGist = false } = {}) {
+  const report = loadReport();
+  const photoIds = collectAllPhotoIds(report);
+
+  // 파일 구성: report.json + image_{id}.txt per image
+  const files = {};
+  const reportCopy = JSON.parse(JSON.stringify(report));
+  delete reportCopy._images;
+  files['report.json'] = { content: JSON.stringify(reportCopy, null, 2) };
+
+  // 이미지를 개별 파일로 저장 (gist 파일당 크기 제한 회피)
+  for (const id of photoIds) {
+    const base64 = await ImageStore.get(id);
+    if (base64) {
+      // 파일명에 / 등 특수문자 방지
+      const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      files[`image_${safeId}.txt`] = { content: base64 };
+    }
+  }
+
+  const existingId = newGist ? '' : getGistId();
+  const address = report.basic.address || '주소 미입력';
+  const reportNo = report.basic.reportNo || '';
+  const description = `${GIST_DESCRIPTION_PREFIX} ${address} ${reportNo ? '| ' + reportNo : ''} | ${formatDate(new Date(), 'yyyy.MM.dd HH:mm')}`;
+
+  let response, data;
+  try {
+    if (existingId) {
+      // 기존 gist의 파일을 모두 null로 덮어쓴 뒤 새 파일로 교체 (삭제된 이미지 반영)
+      const existingGist = await (await gistRequest(`https://api.github.com/gists/${existingId}`)).json();
+      const wipeFiles = {};
+      Object.keys(existingGist.files || {}).forEach(fname => {
+        if (!(fname in files)) wipeFiles[fname] = null; // 삭제
+      });
+      const finalFiles = { ...wipeFiles, ...files };
+
+      response = await gistRequest(`https://api.github.com/gists/${existingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ description, files: finalFiles }),
+      });
+    } else {
+      response = await gistRequest('https://api.github.com/gists', {
+        method: 'POST',
+        body: JSON.stringify({ description, public: false, files }),
+      });
+    }
+  } catch (err) {
+    if (err.status === 404 && existingId) {
+      // 기존 gist가 삭제됨 → 새로 생성
+      setGistId('');
+      return cloudSave({ newGist: true });
+    }
+    throw err;
+  }
+
+  data = await response.json();
+  setGistId(data.id);
+  return {
+    id: data.id,
+    url: data.html_url,
+    photoCount: photoIds.length,
+  };
+}
+
+// 클라우드에서 불러오기 — Gist ID로 로드 후 현재 데이터 덮어씀
+async function cloudLoad(gistId) {
+  if (!gistId) throw new Error('Gist ID가 필요합니다');
+  // URL에서 ID 추출 지원
+  const m = String(gistId).match(/([a-f0-9]{20,})/i);
+  if (m) gistId = m[1];
+
+  const response = await gistRequest(`https://api.github.com/gists/${gistId}`);
+  const data = await response.json();
+  const files = data.files || {};
+
+  const reportFile = files['report.json'];
+  if (!reportFile) throw new Error('올바른 보고서 Gist가 아닙니다 (report.json 없음)');
+
+  // truncated 파일은 raw_url로 직접 fetch
+  async function readFile(fileObj) {
+    if (fileObj.truncated) {
+      const rawResp = await fetch(fileObj.raw_url);
+      return await rawResp.text();
+    }
+    return fileObj.content;
+  }
+
+  const reportContent = await readFile(reportFile);
+  const report = JSON.parse(reportContent);
+
+  // 이미지 복원
+  let imageCount = 0;
+  for (const [filename, fileObj] of Object.entries(files)) {
+    if (!filename.startsWith('image_')) continue;
+    const id = filename.replace(/^image_/, '').replace(/\.txt$/, '');
+    try {
+      const content = await readFile(fileObj);
+      if (content) {
+        await ImageStore.save(id, content);
+        imageCount++;
+      }
+    } catch (_) {}
+  }
+
+  if (!report.meta) report.meta = {};
+  if (!report.meta.id) report.meta.id = 'rpt_' + Date.now();
+  saveReport(report);
+  setGistId(gistId);
+
+  return { id: gistId, imageCount, report };
+}
+
+// 내 theboda-report Gist 목록 조회
+async function cloudListMyReports() {
+  const response = await gistRequest('https://api.github.com/gists?per_page=50');
+  const data = await response.json();
+  return data
+    .filter(g => g.description && g.description.includes(GIST_DESCRIPTION_PREFIX))
+    .map(g => ({
+      id: g.id,
+      description: g.description.replace(GIST_DESCRIPTION_PREFIX, '').trim(),
+      updatedAt: g.updated_at,
+      fileCount: Object.keys(g.files || {}).length,
+      htmlUrl: g.html_url,
+    }));
+}
+
+// ==========================================
 // v1 -> v2 마이그레이션
 // ==========================================
 function migrateV1() {
@@ -1244,6 +1423,14 @@ window.Report = {
   calcElapsedYears,
   migrateV1,
   createDefaultFixedTables,
+  // 클라우드 동기화
+  cloudSave,
+  cloudLoad,
+  cloudListMyReports,
+  getGistToken,
+  setGistToken,
+  getGistId,
+  setGistId,
   DEFAULT: DEFAULT_REPORT,
   CATEGORIES: DETAIL_CATEGORIES,
   STATUS_MAP,
