@@ -728,18 +728,18 @@
         </a>
       </div>
       <div class="nav-group">
-        <div class="nav-group-label">데이터</div>
-        <div class="nav-item" onclick="Report.exportJSON()">
+        <div class="nav-group-label">데이터 / 협업</div>
+        <div class="nav-item" onclick="Report.exportJSON()" title="사진 포함 JSON 파일로 내보냅니다 (다른 진단자에게 전달용)">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
-          JSON 내보내기
+          내보내기 (사진 포함)
         </div>
-        <label class="nav-item" style="cursor:pointer">
+        <label class="nav-item" style="cursor:pointer" title="다른 진단자의 JSON을 병합하거나 덮어씁니다">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
-          JSON 불러오기
+          불러오기 / 병합
           <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
         </label>
         <div class="nav-item" onclick="confirmClear()" style="color: var(--status-danger)">
@@ -2373,12 +2373,45 @@ function confirmClear() {
 function importJSON(input) {
   const file = input.files[0];
   if (!file) return;
-  Report.importJSON(file).then(() => {
-    Report.showToast('데이터를 불러왔습니다', 'success');
-    location.reload();
-  }).catch(() => {
-    Report.showToast('파일을 읽을 수 없습니다', 'error');
+
+  // 현재 작성 중인 데이터가 있는지 확인
+  const current = Report.load();
+  const hasExistingData = current && current.basic && (
+    current.basic.address ||
+    current.basic.clientName ||
+    Object.values(current.categoryData || {}).some(cd =>
+      (cd.opinion && cd.opinion.trim()) ||
+      Object.keys(cd.subStatuses || {}).length > 0 ||
+      (cd.cards || []).length > 0 ||
+      Object.values(cd.cardSlots || {}).some(arr => (arr || []).length > 0)
+    )
+  );
+
+  let mode = 'overwrite';
+  if (hasExistingData) {
+    const choice = prompt(
+      '현재 작성 중인 보고서가 있습니다.\n\n' +
+      '1 = 덮어쓰기 (현재 데이터를 모두 지우고 교체)\n' +
+      '2 = 병합 (현재 데이터를 유지하며 빈 부분만 채우고 카드는 추가)\n' +
+      '취소 = 가져오기 취소\n\n' +
+      '번호를 입력하세요 (1 또는 2):',
+      '2'
+    );
+    if (choice === null) { input.value = ''; return; }
+    if (choice.trim() === '1') mode = 'overwrite';
+    else if (choice.trim() === '2') mode = 'merge';
+    else { Report.showToast('잘못된 입력입니다', 'error'); input.value = ''; return; }
+  }
+
+  Report.importJSON(file, mode).then((result) => {
+    const modeLabel = result.mode === 'merge' ? '병합' : '덮어쓰기';
+    Report.showToast(`${modeLabel} 완료 (사진 ${result.imageCount}장 복원)`, 'success');
+    setTimeout(() => location.reload(), 800);
+  }).catch((err) => {
+    console.error(err);
+    Report.showToast('파일을 읽을 수 없습니다: ' + (err.message || ''), 'error');
   });
+  input.value = '';
 }
 
 // ==========================================

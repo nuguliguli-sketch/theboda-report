@@ -504,28 +504,187 @@ function createNewReport() {
   return data;
 }
 
-function exportReportJSON() {
+// 보고서 내 모든 사진 ID 수집
+function collectAllPhotoIds(report) {
+  const ids = new Set();
+  const catData = report.categoryData || {};
+  Object.values(catData).forEach(cd => {
+    const allCards = [];
+    if (cd.cards) allCards.push(...cd.cards);
+    if (cd.cardSlots) {
+      Object.values(cd.cardSlots).forEach(slotCards => allCards.push(...(slotCards || [])));
+    }
+    allCards.forEach(card => {
+      (card.photos || []).forEach(p => {
+        if (p && p.id) ids.add(p.id);
+      });
+    });
+  });
+  // 평면도 이미지도 포함
+  ids.add('floorplan');
+  return Array.from(ids);
+}
+
+// 사진 포함 내보내기 (협업용)
+async function exportReportJSON() {
   const data = loadReport();
+  showToast('사진 포함 내보내기 준비 중...', 'info', 1500);
+
+  // 모든 사진을 IndexedDB에서 꺼내 base64로 직렬화
+  const photoIds = collectAllPhotoIds(data);
+  const images = {};
+  for (const id of photoIds) {
+    const base64 = await ImageStore.get(id);
+    if (base64) images[id] = base64;
+  }
+  data._images = images;
+  data._exportedAt = new Date().toISOString();
+
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `report_${data.basic.reportNo || formatDate(new Date(), 'yyyyMMdd')}.json`;
+  a.download = `report_${data.basic.reportNo || formatDate(new Date(), 'yyyyMMdd')}_${formatDate(new Date(), 'HHmm')}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  showToast(`내보내기 완료 (사진 ${Object.keys(images).length}장 포함)`, 'success');
 }
 
-function importReportJSON(file) {
+// 카테고리 단위 병합 (기존 데이터 보존, 비어있는 부분만 채움)
+function mergeReports(baseReport, incomingReport) {
+  const merged = JSON.parse(JSON.stringify(baseReport));
+
+  // 기본정보: 비어있는 필드만 채움
+  if (incomingReport.basic) {
+    Object.entries(incomingReport.basic).forEach(([k, v]) => {
+      if (!merged.basic[k] && v) merged.basic[k] = v;
+    });
+  }
+
+  // 종합지표: 비어있는 필드만 채움
+  if (incomingReport.indicators) {
+    Object.entries(incomingReport.indicators).forEach(([k, v]) => {
+      if (!merged.indicators[k] && v) merged.indicators[k] = v;
+    });
+  }
+
+  // 내구연한: 항목별로 빈 값만 채움
+  if (Array.isArray(incomingReport.durability) && Array.isArray(merged.durability)) {
+    incomingReport.durability.forEach((inRow, i) => {
+      const mRow = merged.durability[i];
+      if (!mRow) return;
+      ['standard', 'current', 'remaining', 'status', 'comment'].forEach(k => {
+        if (!mRow[k] && inRow[k]) mRow[k] = inRow[k];
+      });
+    });
+  }
+
+  // 종합판단/전문가의견: 비어있는 필드만 채움
+  ['summary', 'expertOpinion'].forEach(section => {
+    if (incomingReport[section]) {
+      merged[section] = merged[section] || {};
+      Object.entries(incomingReport[section]).forEach(([k, v]) => {
+        if (!merged[section][k] && v) merged[section][k] = v;
+      });
+    }
+  });
+
+  // 세부진단 카테고리 병합
+  merged.categoryData = merged.categoryData || {};
+  const inCatData = incomingReport.categoryData || {};
+  Object.entries(inCatData).forEach(([cat, inCd]) => {
+    if (!merged.categoryData[cat]) {
+      // 해당 카테고리가 비어있으면 전체 복사
+      merged.categoryData[cat] = inCd;
+      return;
+    }
+    const mCd = merged.categoryData[cat];
+
+    // subStatuses: 빈 항목만 채움
+    mCd.subStatuses = mCd.subStatuses || {};
+    Object.entries(inCd.subStatuses || {}).forEach(([sub, st]) => {
+      if (!mCd.subStatuses[sub] && st) mCd.subStatuses[sub] = st;
+    });
+
+    // opinion: 비어있으면 채움, 둘 다 있으면 합침
+    if (!mCd.opinion) mCd.opinion = inCd.opinion || '';
+    else if (inCd.opinion && inCd.opinion !== mCd.opinion) {
+      mCd.opinion = mCd.opinion + '\n\n---\n' + inCd.opinion;
+    }
+
+    // fixedTables: 빈 키만 복사
+    mCd.fixedTables = mCd.fixedTables || {};
+    Object.entries(inCd.fixedTables || {}).forEach(([k, v]) => {
+      const hasData = Array.isArray(mCd.fixedTables[k]) && mCd.fixedTables[k].some(row =>
+        Object.values(row || {}).some(val => val && String(val).trim() && val !== '-')
+      );
+      if (!hasData) mCd.fixedTables[k] = v;
+    });
+
+    // tableEnabled
+    mCd.tableEnabled = { ...(inCd.tableEnabled || {}), ...(mCd.tableEnabled || {}) };
+
+    // cards: 중복 id는 건너뛰고 append
+    if (Array.isArray(inCd.cards)) {
+      mCd.cards = mCd.cards || [];
+      const existingIds = new Set(mCd.cards.map(c => c.id));
+      inCd.cards.forEach(c => {
+        if (!existingIds.has(c.id)) mCd.cards.push(c);
+      });
+    }
+
+    // cardSlots: 슬롯별로 append
+    if (inCd.cardSlots) {
+      mCd.cardSlots = mCd.cardSlots || {};
+      Object.entries(inCd.cardSlots).forEach(([slotKey, slotCards]) => {
+        mCd.cardSlots[slotKey] = mCd.cardSlots[slotKey] || [];
+        const existingIds = new Set(mCd.cardSlots[slotKey].map(c => c.id));
+        (slotCards || []).forEach(c => {
+          if (!existingIds.has(c.id)) mCd.cardSlots[slotKey].push(c);
+        });
+      });
+    }
+  });
+
+  return merged;
+}
+
+// 가져오기 (덮어쓰기 or 병합)
+async function importReportJSON(file, mode = 'overwrite') {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = JSON.parse(e.target.result);
-        if (!data.meta.id) {
-          data.meta.id = 'rpt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const incoming = JSON.parse(e.target.result);
+        if (!incoming || !incoming.basic) throw new Error('올바른 보고서 JSON이 아닙니다');
+
+        // 이미지 복원
+        const images = incoming._images || {};
+        let imageCount = 0;
+        for (const [id, base64] of Object.entries(images)) {
+          try {
+            await ImageStore.save(id, base64);
+            imageCount++;
+          } catch (_) {}
         }
-        saveReport(data);
-        resolve(data);
+        // _images, _exportedAt 제거 (보고서 본체에서)
+        delete incoming._images;
+        delete incoming._exportedAt;
+
+        let finalData;
+        if (mode === 'merge') {
+          const current = loadReport();
+          finalData = mergeReports(current, incoming);
+          finalData.meta = current.meta; // 원본 메타 유지
+        } else {
+          if (!incoming.meta) incoming.meta = {};
+          if (!incoming.meta.id) {
+            incoming.meta.id = 'rpt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+          }
+          finalData = incoming;
+        }
+        saveReport(finalData);
+        resolve({ data: finalData, imageCount, mode });
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
