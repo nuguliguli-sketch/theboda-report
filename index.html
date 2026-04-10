@@ -2500,6 +2500,11 @@ function updateProgressBar() {
 // 저장 액션
 // ==========================================
 function saveDraft(silent) {
+  // 클라우드 불러오기 중에는 빈 폼 덮어쓰기 방지
+  if (window.__skipAutoSave) {
+    console.log('saveDraft 스킵 (__skipAutoSave)');
+    return;
+  }
   const data = Report.collectForm();
   if (Report.save(data)) {
     const now = new Date();
@@ -2690,19 +2695,44 @@ async function doCloudLoad(reportId) {
     <div id="cloud-load-status" style="font-size:12px;color:var(--text-secondary);margin-top:8px">준비 중...</div>
   `);
 
+  // beforeunload 자동저장 차단 플래그 설정 (reload 안 하니까 이론상 불필요하지만 안전장치)
+  window.__skipAutoSave = true;
+
   try {
     const result = await CloudS3.load(reportId, (msg) => {
       const el = document.getElementById('cloud-load-status');
       if (el) el.textContent = msg;
     });
+
+    // reload 대신 in-place 렌더링
+    const report = Report.load();
+    Report.fillForm(report);
+    if (typeof initIndicatorGroups === 'function') initIndicatorGroups(report);
+    if (typeof renderDurabilityTable === 'function') renderDurabilityTable(report);
+    if (typeof renderDetailItems === 'function') renderDetailItems(report);
+    if (typeof updateProgressBar === 'function') updateProgressBar();
+    if (typeof loadFloorPlan === 'function') loadFloorPlan();
+
+    // 기본정보 탭의 준공연도 동기화
+    const byVal = report.basic.buildingYear || '';
+    const bmVal = report.basic.buildingMonth || '';
+    const byEl = document.getElementById('dur_buildYear');
+    const bmEl = document.getElementById('dur_buildMonth');
+    if (byVal && byEl) byEl.value = byVal;
+    if (bmVal && bmEl) bmEl.value = bmVal;
+    if (byVal && typeof calcDurabilityFromYear === 'function') calcDurabilityFromYear();
+    if (typeof calcRepairCostTotal === 'function') calcRepairCostTotal();
+
     closeCloudModal();
     Report.showToast(`불러오기 완료 (사진 ${result.imageCount}장)`, 'success');
-    setTimeout(() => location.reload(), 800);
   } catch (err) {
     Report.showToast('불러오기 실패: ' + err.message, 'error', 6000);
     console.error('Cloud load error:', err);
     // 목록 다시 표시
     setTimeout(() => cloudLoadAction(), 100);
+  } finally {
+    // 약간의 지연 후 자동저장 재활성화 (혹시 렌더링 이벤트가 남아있을 수 있음)
+    setTimeout(() => { window.__skipAutoSave = false; }, 2000);
   }
 }
 
