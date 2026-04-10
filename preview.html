@@ -902,6 +902,9 @@ async function renderReport() {
           <td class="label-cell">일사량</td><td>${val(ind.solarGrade, '-')}등급</td>
         </tr>
       </table>
+      <div style="font-size:8px; color:#7a8fa3; line-height:1.5; margin-top:4px; padding:6px 8px; background:#f8fafc; border-left:2px solid #d8e2ec; border-radius:2px">
+        ※ 본 지표는 Indid.lab ‘THE Stack AVM’ 모델 기반 추정값으로, 참고용 상대 증감률입니다. 실제 사용량과 차이가 발생할 수 있습니다. <span style="color:#aab8c2">*출처: Indid.lab, THE Stack AVM</span>
+      </div>
     ` : ''}
     ${ind.repairCostMin || ind.repairCostMax ? `
       <div style="margin-top:8px">
@@ -1155,7 +1158,7 @@ async function renderReport() {
 
     // 카드 렌더링 헬퍼
     function renderCardPreview(card, catKey) {
-      if (!card.title && !card.fieldNote &&
+      if (!card.title && !card.fieldNote && !card.actionGuide &&
           (!card.photos || card.photos.filter(Boolean).length === 0) &&
           (!card.subJudgments || card.subJudgments.length === 0)) {
         return '';
@@ -1182,10 +1185,16 @@ async function renderReport() {
         }
       }
 
-      if (card.fieldNote && card.fieldNote.trim()) {
+      if (card.fieldNoteEnabled !== false && card.fieldNote && card.fieldNote.trim()) {
         cardBody += `
           <div class="diag-label">현장노트</div>
           <div class="diag-text">${escapeHTML(card.fieldNote)}</div>
+        `;
+      }
+      if (card.actionGuideEnabled !== false && card.actionGuide && card.actionGuide.trim()) {
+        cardBody += `
+          <div class="diag-label">조치 가이드</div>
+          <div class="diag-text">${escapeHTML(card.actionGuide)}</div>
         `;
       }
 
@@ -1219,6 +1228,8 @@ async function renderReport() {
     if (catInfo.sections) {
       catInfo.sections.forEach(sec => {
         if (sec.type === 'table') {
+          // 비활성 테이블은 렌더링 생략
+          if ((cd.tableEnabled || {})[sec.key] === false) return;
           const tableDef = catInfo.fixedTables[sec.key];
           if (tableDef) {
             const rows = (cd.fixedTables || {})[sec.key] || [];
@@ -1235,6 +1246,8 @@ async function renderReport() {
       // 기존 방식
       if (catInfo.fixedTables) {
         Object.entries(catInfo.fixedTables).forEach(([tableKey, tableDef]) => {
+          // 비활성 테이블은 렌더링 생략
+          if ((cd.tableEnabled || {})[tableKey] === false) return;
           const rows = (cd.fixedTables || {})[tableKey] || [];
           catContent += renderFixedTablePreview(tableKey, tableDef, rows);
         });
@@ -1392,9 +1405,13 @@ async function renderReport() {
     }
   }
 
-  // 이미지 로딩 완료 후 페이지 분할
+  // 이미지 로딩 완료 후 페이지 분할 (실패해도 원본은 유지)
   await new Promise(r => setTimeout(r, 200));
-  splitOverflowPages(report);
+  try {
+    splitOverflowPages(report);
+  } catch (e) {
+    console.error('페이지 분할 실패 (원본 유지):', e);
+  }
 }
 
 // ==========================================

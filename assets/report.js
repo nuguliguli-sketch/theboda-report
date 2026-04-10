@@ -769,6 +769,9 @@ function collectFormData() {
       const titleInput = cardEl.querySelector('.card-title-input');
       const layoutBtns = cardEl.querySelectorAll('.layout-btn.active');
       const noteEl = cardEl.querySelector('.card-fieldnote');
+      const guideEl = cardEl.querySelector('.card-actionguide');
+      const noteToggle = cardEl.querySelector('.card-fieldnote-toggle');
+      const guideToggle = cardEl.querySelector('.card-actionguide-toggle');
 
       const subJudgments = [];
       cardEl.querySelectorAll('.sub-judgment-row').forEach(sjRow => {
@@ -805,6 +808,9 @@ function collectFormData() {
         photos,
         subJudgments,
         fieldNote: noteEl ? noteEl.value : '',
+        fieldNoteEnabled: noteToggle ? noteToggle.checked : true,
+        actionGuide: guideEl ? guideEl.value : '',
+        actionGuideEnabled: guideToggle ? guideToggle.checked : true,
       });
     });
     return cards;
@@ -830,6 +836,7 @@ function collectFormData() {
 
     // fixedTables
     if (info.fixedTables) {
+      if (!cd.tableEnabled) cd.tableEnabled = {};
       Object.entries(info.fixedTables).forEach(([tableKey, tableDef]) => {
         if (!cd.fixedTables[tableKey]) cd.fixedTables[tableKey] = [];
         const rows = [];
@@ -846,6 +853,9 @@ function collectFormData() {
           });
           cd.fixedTables[tableKey] = rows;
         }
+        // 활성 상태 수집
+        const toggleEl = document.querySelector(`[data-ftable-toggle="${cat}_${tableKey}"]`);
+        if (toggleEl) cd.tableEnabled[tableKey] = toggleEl.checked;
       });
     }
 

@@ -185,6 +185,11 @@
     .fixed-table-wrap {
       margin-bottom: 16px;
     }
+    .fixed-table-wrap.table-disabled .fixed-table-title span {
+      color: var(--text-muted);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
     .fixed-table-title {
       font-size: 12px;
       font-weight: 700;
@@ -194,8 +199,18 @@
       align-items: center;
       gap: 6px;
     }
-    .fixed-table-title::before {
-      content: '\25AA';
+    .ftable-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ftable-toggle input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+      accent-color: var(--primary);
     }
     .measurement-table {
       width: 100%;
@@ -610,6 +625,27 @@
       font-weight: 600;
       color: var(--text-secondary);
       margin-bottom: 4px;
+    }
+    .card-text-section {
+      margin-top: 8px;
+    }
+    .card-text-section.section-disabled .field-toggle span {
+      color: var(--text-muted);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .field-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .field-toggle input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+      cursor: pointer;
+      accent-color: var(--primary);
     }
 
     /* 카드 추가 버튼 */
@@ -1580,7 +1616,8 @@ function renderDetailItems(report) {
           const tableDef = catInfo.fixedTables[sec.key];
           if (tableDef) {
             const savedRows = (cd.fixedTables || {})[sec.key] || tableDef.defaultRows;
-            sectionsHTML += renderFixedTable(cat, sec.key, tableDef, savedRows);
+            const enabled = (cd.tableEnabled || {})[sec.key];
+            sectionsHTML += renderFixedTable(cat, sec.key, tableDef, savedRows, enabled);
           }
         } else if (sec.type === 'cards') {
           const slotCards = cardSlots[sec.key] || [];
@@ -1598,7 +1635,8 @@ function renderDetailItems(report) {
       if (catInfo.fixedTables && Object.keys(catInfo.fixedTables).length > 0) {
         Object.entries(catInfo.fixedTables).forEach(([tableKey, tableDef]) => {
           const savedRows = (cd.fixedTables || {})[tableKey] || tableDef.defaultRows;
-          sectionsHTML += renderFixedTable(cat, tableKey, tableDef, savedRows);
+          const enabled = (cd.tableEnabled || {})[tableKey];
+          sectionsHTML += renderFixedTable(cat, tableKey, tableDef, savedRows, enabled);
         });
       }
       sectionsHTML += `
@@ -1644,8 +1682,9 @@ function renderDetailItems(report) {
 // ==========================================
 // 고정 테이블 렌더링
 // ==========================================
-function renderFixedTable(cat, tableKey, tableDef, rows) {
+function renderFixedTable(cat, tableKey, tableDef, rows, enabled) {
   const fields = getFieldsForTable(tableKey);
+  const isEnabled = enabled !== false; // 기본값 true
 
   let theadHTML = tableDef.columns.map(col => `<th>${col}</th>`).join('');
   if (tableDef.canAddRow) theadHTML += '<th style="width:36px"></th>';
@@ -1669,15 +1708,30 @@ function renderFixedTable(cat, tableKey, tableDef, rows) {
   }
 
   return `
-    <div class="fixed-table-wrap">
-      <div class="fixed-table-title">${tableDef.title}</div>
-      <table class="measurement-table">
-        <thead><tr>${theadHTML}</tr></thead>
-        <tbody id="ftable_${cat}_${tableKey}_body">${tbodyHTML}</tbody>
-      </table>
-      ${actionsHTML}
+    <div class="fixed-table-wrap${isEnabled ? '' : ' table-disabled'}" id="ftablewrap_${cat}_${tableKey}">
+      <div class="fixed-table-title">
+        <label class="ftable-toggle">
+          <input type="checkbox" data-ftable-toggle="${cat}_${tableKey}" ${isEnabled ? 'checked' : ''} onchange="toggleFixedTable('${cat}', '${tableKey}', this.checked)">
+          <span>${tableDef.title}</span>
+        </label>
+      </div>
+      <div class="ftable-body" style="${isEnabled ? '' : 'display:none'}">
+        <table class="measurement-table">
+          <thead><tr>${theadHTML}</tr></thead>
+          <tbody id="ftable_${cat}_${tableKey}_body">${tbodyHTML}</tbody>
+        </table>
+        ${actionsHTML}
+      </div>
     </div>
   `;
+}
+
+function toggleFixedTable(cat, tableKey, enabled) {
+  const wrap = document.getElementById(`ftablewrap_${cat}_${tableKey}`);
+  if (!wrap) return;
+  const body = wrap.querySelector('.ftable-body');
+  if (body) body.style.display = enabled ? '' : 'none';
+  wrap.classList.toggle('table-disabled', !enabled);
 }
 
 function getFieldsForTable(tableKey) {
@@ -1840,10 +1894,35 @@ function renderCardHTML(cat, card) {
         </div>
       </div>
 
-      <div class="field-label">현장노트</div>
-      <textarea class="card-fieldnote" rows="3" placeholder="현장노트를 입력하세요">${escapeHTML(card.fieldNote || '')}</textarea>
+      <div class="card-text-section${card.fieldNoteEnabled === false ? ' section-disabled' : ''}">
+        <div class="field-label">
+          <label class="field-toggle">
+            <input type="checkbox" class="card-fieldnote-toggle" ${card.fieldNoteEnabled === false ? '' : 'checked'} onchange="toggleCardSection(this, '.card-fieldnote')">
+            <span>현장노트</span>
+          </label>
+        </div>
+        <textarea class="card-fieldnote" rows="3" placeholder="현장노트를 입력하세요" style="${card.fieldNoteEnabled === false ? 'display:none' : ''}">${escapeHTML(card.fieldNote || '')}</textarea>
+      </div>
+
+      <div class="card-text-section${card.actionGuideEnabled === false ? ' section-disabled' : ''}">
+        <div class="field-label">
+          <label class="field-toggle">
+            <input type="checkbox" class="card-actionguide-toggle" ${card.actionGuideEnabled === false ? '' : 'checked'} onchange="toggleCardSection(this, '.card-actionguide')">
+            <span>조치 가이드</span>
+          </label>
+        </div>
+        <textarea class="card-actionguide" rows="3" placeholder="권장 조치 사항을 입력하세요" style="${card.actionGuideEnabled === false ? 'display:none' : ''}">${escapeHTML(card.actionGuide || '')}</textarea>
+      </div>
     </div>
   `;
+}
+
+function toggleCardSection(checkbox, textareaSelector) {
+  const section = checkbox.closest('.card-text-section');
+  if (!section) return;
+  const textarea = section.querySelector(textareaSelector);
+  if (textarea) textarea.style.display = checkbox.checked ? '' : 'none';
+  section.classList.toggle('section-disabled', !checkbox.checked);
 }
 
 function renderSubJudgmentRow(cat, cardId, sji, sj) {
@@ -1882,6 +1961,9 @@ function addCard(cat) {
     subJudgments: [],
     observation: '',
     fieldNote: '',
+    fieldNoteEnabled: true,
+    actionGuide: '',
+    actionGuideEnabled: true,
   };
 
   const div = document.createElement('div');
@@ -2081,7 +2163,7 @@ function updateCardPhotoData(cat, cardId, slotIndex, photoData) {
 
   let card = cards.find(c => c.id === cardId);
   if (!card) {
-    card = { id: cardId, title: '', photoLayout: '3', photos: [], subJudgments: [], observation: '', fieldNote: '' };
+    card = { id: cardId, title: '', photoLayout: '3', photos: [], subJudgments: [], observation: '', fieldNote: '', fieldNoteEnabled: true, actionGuide: '', actionGuideEnabled: true };
     cards.push(card);
   }
   if (!card.photos) card.photos = [];
