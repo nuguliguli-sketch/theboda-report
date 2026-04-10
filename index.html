@@ -1520,7 +1520,7 @@ function renderDurabilityTable(report) {
     tr.innerHTML = `
       <td style="font-weight:600; color:var(--text-secondary)">${row.item}</td>
       <td><input type="number" id="dur_${i}_standard" value="${stdVal}" placeholder="년"></td>
-      <td><input type="number" id="dur_${i}_current" value="${curVal}" placeholder="년"${elapsed !== null ? ' readonly style="color:var(--text-muted)"' : ''}></td>
+      <td><input type="number" id="dur_${i}_current" value="${curVal}" placeholder="년" title="교체 확인 시 수동 수정 가능"></td>
       <td><input type="number" id="dur_${i}_remaining" value="${remVal}" placeholder="년" style="color:var(--primary)" readonly></td>
       <td>
         <div class="status-group">
@@ -1541,9 +1541,7 @@ function renderDurabilityTable(report) {
       else remInput.value = '';
     }
     stdInput.addEventListener('input', calcRemaining);
-    if (!curInput.readOnly) {
-      curInput.addEventListener('input', calcRemaining);
-    }
+    curInput.addEventListener('input', calcRemaining);
   });
 }
 
@@ -1558,8 +1556,6 @@ function onBuildingYearChange(value) {
     const curInput = document.getElementById(`dur_${i}_current`);
     if (curInput) {
       curInput.value = elapsed;
-      curInput.readOnly = true;
-      curInput.style.color = 'var(--text-muted)';
       const stdInput = document.getElementById(`dur_${i}_standard`);
       const remInput = document.getElementById(`dur_${i}_remaining`);
       if (stdInput && remInput) {
