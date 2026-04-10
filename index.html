@@ -2819,6 +2819,9 @@ function importJSON(input) {
     else { Report.showToast('잘못된 입력입니다', 'error'); input.value = ''; return; }
   }
 
+  // beforeunload 자동저장이 빈 폼으로 덮어쓰는 문제 방지 (클라우드 불러오기와 동일 이슈)
+  window.__skipAutoSave = true;
+
   Report.importJSON(file, mode).then((result) => {
     const modeLabel = result.mode === 'merge' ? '병합' : '덮어쓰기';
     Report.showToast(`${modeLabel} 완료 (사진 ${result.imageCount}장 복원)`, 'success');
@@ -2826,6 +2829,7 @@ function importJSON(input) {
   }).catch((err) => {
     console.error(err);
     Report.showToast('파일을 읽을 수 없습니다: ' + (err.message || ''), 'error');
+    window.__skipAutoSave = false; // 실패시 복구
   });
   input.value = '';
 }
