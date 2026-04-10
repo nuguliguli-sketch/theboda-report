@@ -296,6 +296,31 @@
       gap: 8px;
       margin-bottom: 12px;
     }
+    .card-order-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .card-order-btn {
+      width: 26px;
+      height: 18px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 9px;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .card-order-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
     .card-title-input {
       flex: 1;
       background: var(--bg-input);
@@ -1864,6 +1889,10 @@ function renderCardHTML(cat, card) {
     <div class="field-card" data-card-id="${cardId}">
       <div class="field-card-header">
         <input type="text" class="card-title-input" value="${escapeAttr(card.title || '')}" placeholder="카드 제목을 입력하세요">
+        <div class="card-order-btns">
+          <button class="card-order-btn" onclick="moveCard('${cat}', '${cardId}', -1)" title="위로 이동">▲</button>
+          <button class="card-order-btn" onclick="moveCard('${cat}', '${cardId}', 1)" title="아래로 이동">▼</button>
+        </div>
         <button class="btn btn-sm" style="color:var(--status-danger);border-color:var(--status-danger)" onclick="removeCard('${cat}', '${cardId}')">삭제</button>
       </div>
 
@@ -1965,6 +1994,49 @@ function addCard(cat) {
   const div = document.createElement('div');
   div.innerHTML = renderCardHTML(cat, newCard);
   cardsContainer.appendChild(div.firstElementChild);
+}
+
+function moveCard(cat, cardId, direction) {
+  const cardEl = document.querySelector(`.field-card[data-card-id="${cardId}"]`);
+  if (!cardEl) return;
+  const container = cardEl.parentElement;
+  if (!container) return;
+
+  // 형제 카드들 (field-card만)
+  const siblings = Array.from(container.querySelectorAll(':scope > .field-card'));
+  const idx = siblings.indexOf(cardEl);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= siblings.length) return;
+
+  // DOM 이동
+  if (direction < 0) {
+    container.insertBefore(cardEl, siblings[newIdx]);
+  } else {
+    container.insertBefore(cardEl, siblings[newIdx].nextSibling);
+  }
+
+  // 데이터 모델에서도 순서 변경 후 저장
+  const report = Report.load();
+  const parts = cat.split('_');
+  const baseCat = parts[0];
+  const slotKey = parts.length > 1 ? parts.slice(1).join('_') : null;
+  const cd = (report.categoryData || {})[baseCat];
+  if (cd) {
+    let cards;
+    if (slotKey && cd.cardSlots) cards = cd.cardSlots[slotKey];
+    else cards = cd.cards;
+    if (cards && cards.length > 0) {
+      const dataIdx = cards.findIndex(c => c.id === cardId);
+      if (dataIdx !== -1) {
+        const dataNewIdx = dataIdx + direction;
+        if (dataNewIdx >= 0 && dataNewIdx < cards.length) {
+          const [moved] = cards.splice(dataIdx, 1);
+          cards.splice(dataNewIdx, 0, moved);
+          Report.save(report);
+        }
+      }
+    }
+  }
 }
 
 function removeCard(cat, cardId) {
