@@ -377,10 +377,12 @@
     .photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
     .photo-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
     .photo-grid[data-cols="6"] { grid-template-columns: 1fr 1fr 1fr; }
-    .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr; }
+    .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr 1fr 1fr; }
 
     .photo-cell img {
       width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
       border-radius: 4px;
       border: 1px solid #d8e2ec;
       display: block;
@@ -891,6 +893,12 @@ async function renderReport() {
         <td>${val(ind.plumbingCost)}</td>
         <td colspan="2" style="font-size:9px">${val(ind.plumbingComment, '')}</td>
       </tr>
+      ${ind.repairCostMin || ind.repairCostMax ? `
+        <tr style="background:#f4f7fb">
+          <td class="label-cell" style="font-weight:700;color:#0a1628">예상 총 수선비용</td>
+          <td colspan="3" style="font-weight:700;color:#0a1628">${val(ind.repairCostMin, '?')} ~ ${val(ind.repairCostMax, '?')} 만원</td>
+        </tr>
+      ` : ''}
     </table>
 
     ${ind.sunlightGrade || ind.opennessGrade || ind.solarGrade ? `
@@ -904,16 +912,6 @@ async function renderReport() {
       </table>
       <div style="font-size:8px; color:#7a8fa3; line-height:1.5; margin-top:4px; padding:6px 8px; background:#f8fafc; border-left:2px solid #d8e2ec; border-radius:2px">
         ※ 본 지표는 Indid.lab ‘THE Stack AVM’ 모델 기반 추정값으로, 참고용 상대 증감률입니다. 실제 사용량과 차이가 발생할 수 있습니다. <span style="color:#aab8c2">*출처: Indid.lab, THE Stack AVM</span>
-      </div>
-    ` : ''}
-    ${ind.repairCostMin || ind.repairCostMax ? `
-      <div style="margin-top:8px">
-        <table class="info-table">
-          <tr>
-            <td class="label-cell">예상 총 수선비용</td>
-            <td colspan="3">${val(ind.repairCostMin, '?')} ~ ${val(ind.repairCostMax, '?')} 만원</td>
-          </tr>
-        </table>
       </div>
     ` : ''}
     ${pageFooter(report, pageNum)}
@@ -970,17 +968,22 @@ async function renderReport() {
     });
   });
 
+  // 종합판단요약 토글 — false면 종합 판정/요약 섹션 생략 (통계는 유지)
+  const summaryEnabled = sum.enabled !== false;
+
   pages.push(pageWrap(pageNum, `
     ${pageHeader(report, '종합진단결과 요약 및 리스크분석')}
-    <div class="summary-overall">
-      <span class="overall-label">종합 판정</span>
-      ${pb(sum.overallStatus)}
-      <span style="font-size:10px;color:#4a6a8a;margin-left:12px">예상보수비용: 약 ${val(ind.repairCostMin, '?')}~${val(ind.repairCostMax, '?')}만원</span>
-    </div>
+    ${summaryEnabled ? `
+      <div class="summary-overall">
+        <span class="overall-label">종합 판정</span>
+        ${pb(sum.overallStatus)}
+        <span style="font-size:10px;color:#4a6a8a;margin-left:12px">예상보수비용: 약 ${val(ind.repairCostMin, '?')}~${val(ind.repairCostMax, '?')}만원</span>
+      </div>
 
-    ${sum.summaryText ? `
-      <div class="rpt-section-title">종합 요약</div>
-      <div style="font-size:10px; color:#4a6a8a; line-height:1.7; margin-bottom:12px; white-space:pre-wrap">${val(sum.summaryText)}</div>
+      ${sum.summaryText ? `
+        <div class="rpt-section-title">종합 요약</div>
+        <div style="font-size:10px; color:#4a6a8a; line-height:1.7; margin-bottom:12px; white-space:pre-wrap">${val(sum.summaryText)}</div>
+      ` : ''}
     ` : ''}
 
     <div class="rpt-section-title">진단 통계</div>
@@ -1048,24 +1051,27 @@ async function renderReport() {
   pageNum++;
 
   // ── Page 6: 전문가 분석의견 ──
+  // 전문가 분석의견 토글 — false면 페이지 자체를 생략
   const exp = report.expertOpinion || {};
-  pages.push(pageWrap(pageNum, `
-    ${pageHeader(report, '전문가 분석 및 의견')}
-    <div class="expert-box">
-      <div class="expert-box-title">안전 리스크</div>
-      <div class="expert-box-text">${val(exp.safetyRisk)}</div>
-    </div>
-    <div class="expert-box">
-      <div class="expert-box-title">비용 리스크</div>
-      <div class="expert-box-text">${val(exp.costRisk)}</div>
-    </div>
-    <div class="expert-box">
-      <div class="expert-box-title">성능 및 거주체감</div>
-      <div class="expert-box-text">${val(exp.livingPerformance)}</div>
-    </div>
-    ${pageFooter(report, pageNum)}
-  `));
-  pageNum++;
+  if (exp.enabled !== false) {
+    pages.push(pageWrap(pageNum, `
+      ${pageHeader(report, '전문가 분석 및 의견')}
+      <div class="expert-box">
+        <div class="expert-box-title">안전 리스크</div>
+        <div class="expert-box-text">${val(exp.safetyRisk)}</div>
+      </div>
+      <div class="expert-box">
+        <div class="expert-box-title">비용 리스크</div>
+        <div class="expert-box-text">${val(exp.costRisk)}</div>
+      </div>
+      <div class="expert-box">
+        <div class="expert-box-title">성능 및 거주체감</div>
+        <div class="expert-box-text">${val(exp.livingPerformance)}</div>
+      </div>
+      ${pageFooter(report, pageNum)}
+    `));
+    pageNum++;
+  }
 
   // ── 간지: 세부진단 ──
   pages.push(`
@@ -1205,7 +1211,7 @@ async function renderReport() {
           <div class="photo-grid" data-cols="${cols}" id="cardphotos_${catKey}_${card.id}">
             ${validPhotos.map((p, pi) => `
               <div class="photo-cell" id="pcell_${catKey}_${card.id}_${pi}">
-                <div style="background:#f4f7fb;padding:20px;text-align:center;font-size:9px;color:#aab8c2;border-radius:4px">사진 로딩중...</div>
+                <div style="background:#f4f7fb;width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aab8c2;border-radius:4px">사진 로딩중...</div>
               </div>
             `).join('')}
           </div>

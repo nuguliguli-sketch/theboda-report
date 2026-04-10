@@ -294,17 +294,27 @@
   .photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
   .photo-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
   .photo-grid[data-cols="6"] { grid-template-columns: 1fr 1fr 1fr; }
-  .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr; }
+  .photo-grid[data-cols="8"] { grid-template-columns: 1fr 1fr 1fr 1fr; }
 
+  /* 모든 사진 셀을 동일한 4:3 비율로 통일.
+     원본이 세로/가로 어느 쪽이든 object-fit: cover로 영역을 채워 균일한 그리드 보장.
+     ※ 인쇄에서 aspect-ratio가 안 먹는 일부 엔진 대비 max-height도 함께 둠. */
   .photo-cell img {
     width: 100%;
+    aspect-ratio: 4/3;
     height: auto;
-    max-height: 50mm;
+    max-height: 60mm;
     object-fit: cover;
     border: 0.3pt solid #d8e2ec;
     border-radius: 1.5pt;
     display: block;
   }
+  .photo-grid[data-cols="1"] .photo-cell img { max-height: 110mm; }
+  .photo-grid[data-cols="2"] .photo-cell img { max-height: 75mm; }
+  .photo-grid[data-cols="3"] .photo-cell img { max-height: 50mm; }
+  .photo-grid[data-cols="4"] .photo-cell img { max-height: 75mm; }
+  .photo-grid[data-cols="6"] .photo-cell img { max-height: 50mm; }
+  .photo-grid[data-cols="8"] .photo-cell img { max-height: 38mm; }
   .photo-cell-caption {
     font-size: 7pt;
     color: #4a6a8a !important;

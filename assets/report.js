@@ -327,6 +327,7 @@ function createDefaultReport() {
       overallStatus: '',
       summaryText: '',
       priorityActions: '',
+      enabled: true, // 토글: 종합판단요약 섹션 사용 여부
     },
 
     // 전문가 의견 (PDF p.7)
@@ -334,6 +335,7 @@ function createDefaultReport() {
       safetyRisk: '',
       costRisk: '',
       livingPerformance: '',
+      enabled: true, // 토글: 전문가 분석의견 페이지 사용 여부
     },
 
     // 카테고리별 세부진단 데이터 (v3 신규)
@@ -1138,12 +1140,16 @@ function collectFormData() {
   });
   const overallSt = document.querySelector('[name="summary_overallStatus"]:checked');
   if (overallSt) report.summary.overallStatus = overallSt.value;
+  const summaryToggle = document.getElementById('toggle_summary_enabled');
+  if (summaryToggle) report.summary.enabled = summaryToggle.checked;
 
   // expertOpinion
   ['safetyRisk', 'costRisk', 'livingPerformance'].forEach(k => {
     const el = document.getElementById(`expert_${k}`);
     if (el) report.expertOpinion[k] = el.value;
   });
+  const expertToggle = document.getElementById('toggle_expert_enabled');
+  if (expertToggle) report.expertOpinion.enabled = expertToggle.checked;
 
   function collectCardsFromContainer(container, catKey, existingCards) {
     const cardEls = container.querySelectorAll('.field-card');
@@ -1327,12 +1333,28 @@ function fillForm(report) {
     const radio = document.querySelector(`[name="summary_overallStatus"][value="${ov}"]`);
     if (radio) radio.checked = true;
   }
+  // 종합판단요약 토글 상태 복원 (기본값 true)
+  const summaryEnabled = (report.summary || {}).enabled !== false;
+  const summaryToggle = document.getElementById('toggle_summary_enabled');
+  if (summaryToggle) {
+    summaryToggle.checked = summaryEnabled;
+    const card = document.getElementById('card-summary-block');
+    if (card) card.classList.toggle('card-disabled', !summaryEnabled);
+  }
 
   // expertOpinion
   ['safetyRisk', 'costRisk', 'livingPerformance'].forEach(k => {
     const el = document.getElementById(`expert_${k}`);
     if (el) el.value = (report.expertOpinion || {})[k] || '';
   });
+  // 전문가 분석의견 토글 상태 복원 (기본값 true)
+  const expertEnabled = (report.expertOpinion || {}).enabled !== false;
+  const expertToggle = document.getElementById('toggle_expert_enabled');
+  if (expertToggle) {
+    expertToggle.checked = expertEnabled;
+    const card = document.getElementById('card-expert-block');
+    if (card) card.classList.toggle('card-disabled', !expertEnabled);
+  }
 
   // categoryData는 renderDetailItems에서 처리
 }

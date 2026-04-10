@@ -247,6 +247,30 @@
       min-height: 60px;
     }
 
+    /* 카드 단위 토글 (종합판단요약 / 전문가 분석의견) */
+    .card-toggle-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card-toggle-title input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      margin: 0;
+    }
+    .card.card-disabled .card-toggle-title > span:not(.badge) {
+      color: var(--text-muted);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .card.card-disabled .card-body-toggleable {
+      display: none;
+    }
+
     /* 안내 문구 */
     .info-note {
       font-size: 11px;
@@ -486,7 +510,7 @@
     .photo-slots[data-layout="3"] { grid-template-columns: 1fr 1fr 1fr; }
     .photo-slots[data-layout="4"] { grid-template-columns: 1fr 1fr; }
     .photo-slots[data-layout="6"] { grid-template-columns: 1fr 1fr 1fr; }
-    .photo-slots[data-layout="8"] { grid-template-columns: 1fr 1fr; }
+    .photo-slots[data-layout="8"] { grid-template-columns: 1fr 1fr 1fr 1fr; }
     .photo-slot {
       aspect-ratio: 4/3;
       border: 1.5px dashed var(--border);
@@ -1360,9 +1384,15 @@
            탭 5: 종합판단
       ═══════════════════════════════════ -->
       <div id="tab-summary" class="form-section">
-        <div class="card">
-          <div class="card-title">종합판단요약 <span class="badge">p.6</span></div>
-          <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card" id="card-summary-block">
+          <div class="card-title">
+            <label class="card-toggle-title">
+              <input type="checkbox" id="toggle_summary_enabled" checked onchange="toggleCard('card-summary-block', this.checked)">
+              <span>종합판단요약</span>
+            </label>
+            <span class="badge">p.6</span>
+          </div>
+          <div class="card-body-toggleable" style="display:flex; flex-direction:column; gap:16px;">
             <div class="form-group">
               <label>종합 판정</label>
               <div class="status-group" id="sg_overallStatus"></div>
@@ -1393,9 +1423,15 @@
            탭 6: 전문가의견
       ═══════════════════════════════════ -->
       <div id="tab-expert" class="form-section">
-        <div class="card">
-          <div class="card-title">전문가 분석의견 <span class="badge">p.7</span></div>
-          <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card" id="card-expert-block">
+          <div class="card-title">
+            <label class="card-toggle-title">
+              <input type="checkbox" id="toggle_expert_enabled" checked onchange="toggleCard('card-expert-block', this.checked)">
+              <span>전문가 분석의견</span>
+            </label>
+            <span class="badge">p.7</span>
+          </div>
+          <div class="card-body-toggleable" style="display:flex; flex-direction:column; gap:20px;">
             <div class="form-group">
               <label>안전 리스크</label>
               <textarea id="expert_safetyRisk" rows="6" placeholder="안전 관련 항목에 대한 전문가 분석 의견을 기술하세요."></textarea>
@@ -2022,6 +2058,13 @@ function toggleCatOpinion(cat, enabled) {
   const textarea = document.getElementById(`cat_opinion_${cat}`);
   if (textarea) textarea.style.display = enabled ? '' : 'none';
   wrap.classList.toggle('opinion-disabled', !enabled);
+}
+
+// 카드 단위 토글 (종합판단요약 / 전문가 분석의견)
+function toggleCard(cardId, enabled) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.classList.toggle('card-disabled', !enabled);
 }
 
 function getFieldsForTable(tableKey) {
