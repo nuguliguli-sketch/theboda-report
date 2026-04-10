@@ -346,6 +346,37 @@ const DEFAULT_REPORT = createDefaultReport();
 // ==========================================
 // 보고서 번호 자동생성 (YYYYMMDD-NNN)
 // ==========================================
+// ==========================================
+// 진단자 프로필 (이니셜 관리)
+// ==========================================
+const INSPECTOR_PROFILE_KEY = 'theboda_inspector_profile';
+
+function getInspectorProfile() {
+  try {
+    const raw = localStorage.getItem(INSPECTOR_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setInspectorProfile(profile) {
+  if (profile && profile.initials) {
+    const clean = {
+      name: String(profile.name || '').trim(),
+      initials: String(profile.initials || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4),
+    };
+    if (!clean.initials) {
+      localStorage.removeItem(INSPECTOR_PROFILE_KEY);
+      return null;
+    }
+    localStorage.setItem(INSPECTOR_PROFILE_KEY, JSON.stringify(clean));
+    return clean;
+  }
+  localStorage.removeItem(INSPECTOR_PROFILE_KEY);
+  return null;
+}
+
 function generateReportNo() {
   const now = new Date();
   const y = now.getFullYear();
@@ -353,15 +384,31 @@ function generateReportNo() {
   const d = String(now.getDate()).padStart(2, '0');
   const datePrefix = `${y}${m}${d}`;
 
+  const profile = getInspectorProfile();
+  const initials = profile && profile.initials ? profile.initials : '';
+
   const list = getReportsList();
-  const todayReports = list.filter(r => r.reportNo && r.reportNo.startsWith(datePrefix));
-  const maxSeq = todayReports.reduce((max, r) => {
+  // 이니셜 기반이면 같은 이니셜만, 아니면 이니셜 없는 것(legacy 포함)만 카운트
+  const matching = list.filter(r => {
+    if (!r.reportNo || !r.reportNo.startsWith(datePrefix)) return false;
     const parts = r.reportNo.split('-');
-    const seq = parseInt(parts[1]) || 0;
+    if (initials) {
+      // YYYYMMDD-INI-XXX 형식, parts[1]이 이니셜과 일치
+      return parts.length === 3 && parts[1] === initials;
+    } else {
+      // YYYYMMDD-XXX 형식
+      return parts.length === 2;
+    }
+  });
+
+  const maxSeq = matching.reduce((max, r) => {
+    const parts = r.reportNo.split('-');
+    const seq = parseInt(parts[parts.length - 1]) || 0;
     return Math.max(max, seq);
   }, 0);
 
-  return `${datePrefix}-${String(maxSeq + 1).padStart(3, '0')}`;
+  const seqStr = String(maxSeq + 1).padStart(3, '0');
+  return initials ? `${datePrefix}-${initials}-${seqStr}` : `${datePrefix}-${seqStr}`;
 }
 
 // ==========================================
@@ -1424,6 +1471,9 @@ window.Report = {
   migrateV1,
   createDefaultFixedTables,
   // 클라우드 동기화
+  // 진단자 프로필
+  getInspectorProfile,
+  setInspectorProfile,
   cloudSave,
   cloudLoad,
   cloudListMyReports,
