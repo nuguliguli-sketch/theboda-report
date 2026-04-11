@@ -159,6 +159,28 @@
     emit();
   }
 
+  // 특정 버전 삭제 — 드래프트 있으면 사용자 경고는 UI가 처리
+  async function deleteVersion(versionId) {
+    if (!state.currentReport) throw new Error('리뷰가 로드되지 않았습니다');
+
+    const wasViewing = state.viewingVersion === versionId;
+    // 보던 버전이면 드래프트 삭제
+    if (wasViewing) {
+      clearDraft(state.currentReport.reportId, versionId);
+    }
+
+    const meta = await Sync.deleteVersion(state.currentReport.reportId, versionId);
+    state.currentReport.meta = meta;
+
+    // 보던 버전이 삭제됐으면 새 active로 이동
+    if (wasViewing) {
+      await loadVersion(meta.activeVersion);
+    } else {
+      emit();
+    }
+    return meta;
+  }
+
   // ─── 비교 모드 ─────────────────────────────────────────
   function setCompareMode(a, b) {
     state.compareMode = { a, b };
@@ -194,6 +216,7 @@
     revertDraft,
     saveNewVersion,
     setActiveVersion,
+    deleteVersion,
     setCompareMode,
     clearCompareMode,
     reloadFromDisk,

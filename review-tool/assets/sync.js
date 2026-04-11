@@ -405,6 +405,57 @@
     return meta;
   }
 
+  /**
+   * 특정 버전 삭제
+   * - v001(원본 임포트)은 삭제 불가
+   * - 삭제된 버전의 자식들은 parentVersion을 삭제된 버전의 부모로 재연결
+   * - activeVersion이 삭제된 거면 부모로 이동
+   * - 버전 파일 물리 삭제 + meta.json 업데이트
+   */
+  async function deleteVersion(reportId, versionId) {
+    await ensurePermission();
+    if (versionId === 'v001') {
+      throw new Error('v001(원본 임포트)은 삭제할 수 없습니다. 리뷰 전체 삭제가 필요하면 [📋 리뷰 목록]에서 삭제하세요.');
+    }
+
+    const dir = await getReviewDir(reportId);
+    const meta = JSON.parse(await readFile(dir, 'meta.json'));
+
+    const entry = meta.versions.find((v) => v.id === versionId);
+    if (!entry) throw new Error(`존재하지 않는 버전: ${versionId}`);
+
+    const newParent = entry.parentVersion; // 삭제할 버전의 부모 (null 또는 다른 버전 id)
+
+    // 자식 버전들 재연결: parentVersion === 삭제 대상이면 → 삭제 대상의 부모로
+    meta.versions.forEach((v) => {
+      if (v.parentVersion === versionId) {
+        v.parentVersion = newParent;
+      }
+    });
+
+    // versions 배열에서 해당 엔트리 제거
+    meta.versions = meta.versions.filter((v) => v.id !== versionId);
+
+    // activeVersion이 삭제된 거면 부모로 이동 (부모가 null이면 v001 폴백)
+    if (meta.activeVersion === versionId) {
+      meta.activeVersion = newParent || 'v001';
+    }
+
+    // 물리 파일 삭제
+    try {
+      const versions = await getSubDir(dir, 'versions');
+      await versions.removeEntry(`${versionId}.json`);
+    } catch (e) {
+      console.warn(`[deleteVersion] 파일 삭제 실패 ${versionId}.json — meta는 이미 업데이트됨:`, e.message);
+      // meta는 이미 수정했으므로 저장은 계속 진행
+    }
+
+    // meta.json 저장
+    await writeFile(dir, 'meta.json', JSON.stringify(meta, null, 2));
+
+    return meta;
+  }
+
   // ─── 이미지 ─────────────────────────────────────────────
   async function loadImage(reportId, imageId) {
     if (!imageId) return null;
@@ -496,6 +547,7 @@
     loadVersion,
     saveNewVersion,
     setActiveVersion,
+    deleteVersion,
     loadImage,
     saveImage,
     loadNotes,

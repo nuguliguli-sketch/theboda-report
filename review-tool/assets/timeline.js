@@ -62,6 +62,7 @@
           const isViewing = v.id === viewingId;
           const isCompareA = compareMode && compareMode.a === v.id;
           const isCompareB = compareMode && compareMode.b === v.id;
+          const canDelete = v.id !== 'v001'; // v001만 삭제 불가
           const classes = [
             'timeline-item',
             isActive ? 'active' : '',
@@ -77,6 +78,7 @@
                   <span class="version-id">${escapeHTML(v.id)}</span>
                   ${isActive ? '<span class="active-star" title="활성 버전">★</span>' : ''}
                   ${authorBadge(v.author)}
+                  ${canDelete ? `<button type="button" class="timeline-delete-btn" data-delete-version="${escapeHTML(v.id)}" title="이 버전 삭제">🗑</button>` : ''}
                 </div>
                 <div class="timeline-item-label">${escapeHTML(v.label || '(라벨 없음)')}</div>
                 ${v.description ? `<div class="timeline-item-desc">${escapeHTML(v.description)}</div>` : ''}
@@ -107,10 +109,21 @@
   }
 
   function attachListeners() {
-    // 버전 클릭
+    // 삭제 버튼 (버전 클릭보다 먼저 처리 — stopPropagation)
+    mountEl.querySelectorAll('.timeline-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const vid = btn.dataset.deleteVersion;
+        if (!vid) return;
+        await handleDeleteVersion(vid);
+      });
+    });
+
+    // 버전 클릭 (삭제 버튼·체크박스 제외)
     mountEl.querySelectorAll('.timeline-item').forEach((el) => {
       el.addEventListener('click', async (e) => {
         if (e.target.classList.contains('compare-check')) return;
+        if (e.target.classList.contains('timeline-delete-btn')) return;
         const vid = el.dataset.version;
         if (!vid) return;
         try {
@@ -160,6 +173,44 @@
         }
         render();
       });
+    }
+  }
+
+  // ─── 버전 삭제 핸들러 ──────────────────────────────────
+  async function handleDeleteVersion(vid) {
+    const report = Store.state.currentReport;
+    if (!report) return;
+    const meta = report.meta;
+    const entry = meta.versions.find((v) => v.id === vid);
+    if (!entry) return;
+
+    const isActive = vid === meta.activeVersion;
+    const children = meta.versions.filter((v) => v.parentVersion === vid);
+    const parentOf = entry.parentVersion;
+
+    // 확인 메시지 구성
+    let msg = `버전 "${vid} · ${entry.label || '(라벨 없음)'}"을(를) 영구 삭제합니다.\n\n`;
+    if (isActive) {
+      msg += `⚠ 현재 활성(★) 버전입니다. 삭제하면 부모 버전 "${parentOf || 'v001'}"이(가) 활성이 됩니다.\n\n`;
+    }
+    if (children.length > 0) {
+      msg += `이 버전을 부모로 가진 자식 버전 ${children.length}개의 parentVersion이 "${parentOf || '(없음)'}"으로 자동 재연결됩니다.\n\n`;
+    }
+    msg += '이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?';
+
+    if (!confirm(msg)) return;
+
+    try {
+      await Store.deleteVersion(vid);
+      // render()는 Store 구독이 호출 (메타 변경 감지). 타임라인은 즉시 재렌더.
+      render();
+      // 토스트 (review.html의 전역 함수가 있으면 사용)
+      if (window.toast) {
+        window.toast(`버전 ${vid} 삭제 완료`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('삭제 실패: ' + err.message);
     }
   }
 
