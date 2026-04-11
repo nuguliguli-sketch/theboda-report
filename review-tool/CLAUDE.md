@@ -75,6 +75,7 @@ reviews/{reportId}/
 | `expertOpinion.costRisk` | 비용 리스크 의견 |
 | `expertOpinion.livingPerformance` | 거주 성능 의견 |
 | `categoryData.{A-H}.opinion` | 카테고리별 종합 의견 |
+| `categoryData.{A-H}.skippedNote` | 카테고리 점검 생략 사유 — 입력 시 보고서 카테고리 페이지 상단에 "참고 — 점검 생략 항목" 박스로 표시 |
 | `categoryData.{A-H}.subStatuses.{subItem}` | 세부 점검 항목 상태 |
 | `categoryData.{A-H}.cards[n].title` | 카드 제목 |
 | `categoryData.{A-H}.cards[n].fieldNote` | 현장 확인 내용 (관찰사항) |

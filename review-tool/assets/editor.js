@@ -450,6 +450,7 @@
       ${sectionHeader(catMeta.label, '')}
       ${renderDetailSubStatuses(cat, catData)}
       ${renderDetailOpinion(cat, catData)}
+      ${renderDetailSkippedNote(cat, catData)}
       ${renderDetailSections(cat, catData)}
     `;
   }
@@ -483,6 +484,17 @@
       <div class="sub-block">
         <div class="sub-block-title">카테고리 종합 의견</div>
         <textarea class="full-textarea" data-path="categoryData.${cat}.opinion" rows="4" placeholder="이 카테고리 전반에 대한 의견">${escapeHTML(catData.opinion || '')}</textarea>
+      </div>
+    `;
+  }
+
+  // 점검 생략 사유 — 본 웹의 cat_skip_{cat} textarea와 대응 (Phase 3.2)
+  // 입력 시 preview.html의 카테고리 페이지 상단 "참고 — 점검 생략 항목" 박스로 렌더됨
+  function renderDetailSkippedNote(cat, catData) {
+    return `
+      <div class="sub-block">
+        <div class="sub-block-title">점검 생략 사유 <span class="sub-block-count">(선택, 입력 시 보고서에 안내 박스 표시)</span></div>
+        <textarea class="full-textarea" data-path="categoryData.${cat}.skippedNote" rows="2" placeholder="예: 현장 일정 제약으로 결로 측정 미실시 — 별도 일정에 재점검 예정">${escapeHTML(catData.skippedNote || '')}</textarea>
       </div>
     `;
   }

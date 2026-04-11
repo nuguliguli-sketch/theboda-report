@@ -65,6 +65,24 @@
     return !!loadDraft(reportId, versionId);
   }
 
+  // ─── 스키마 정규화 ─────────────────────────────────────
+  // 본 웹 스키마 확장(후속 Phase 3.2 등)에 따라 신규 필드가 추가될 수 있음.
+  // PathUtils.set()은 "존재하지 않는 키"를 거부하므로, 편집 UI가 쓰기 전에
+  // 빈 값으로 키를 심어둬야 한다. 동시에 viewingSnapshot / parentData 쪽에도
+  // 동일 정규화를 적용해야 diff가 오탐되지 않는다.
+  const NORMALIZE_CATEGORIES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  function normalizeReportShape(data) {
+    if (!data || typeof data !== 'object') return;
+    const cd = data.categoryData;
+    if (!cd || typeof cd !== 'object') return;
+    for (const cat of NORMALIZE_CATEGORIES) {
+      const entry = cd[cat];
+      if (entry && typeof entry === 'object' && !('skippedNote' in entry)) {
+        entry.skippedNote = '';
+      }
+    }
+  }
+
   // ─── 리뷰/버전 로드 ─────────────────────────────────────
   async function loadReport(reportId) {
     const meta = await Sync.loadMeta(reportId);
@@ -82,12 +100,15 @@
     // currentVersion: 편집 가능한 작업 사본 (input 이벤트로 mutate)
     state.viewingSnapshot = data;
     state.currentVersion = JSON.parse(JSON.stringify(data));
+    normalizeReportShape(state.viewingSnapshot);
+    normalizeReportShape(state.currentVersion);
     state.dirty = false;
 
     // 드래프트 체크
     const draft = loadDraft(state.currentReport.reportId, versionId);
     if (draft) {
       state.currentVersion = draft;
+      normalizeReportShape(state.currentVersion);
       state.dirty = true;
     }
     emit();
@@ -127,6 +148,8 @@
     // 이전 버전과 diff 계산 (부모는 viewingVersion)
     let parentVersion = state.viewingVersion;
     const parentData = await Sync.loadVersion(state.currentReport.reportId, parentVersion);
+    // 정규화 — currentVersion과 동일한 기본 필드셋으로 맞춰 오탐 방지
+    normalizeReportShape(parentData);
     const changedPaths = PathUtils.diff(parentData, state.currentVersion).map((c) => c.path);
 
     if (changedPaths.length === 0) {
