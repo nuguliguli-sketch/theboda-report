@@ -12,11 +12,11 @@ const ACTIVE_REPORT_KEY = 'theboda_active_report_id';
 // 상태 라벨/색상 매핑 (PDF 원본 기준 4단계)
 // ==========================================
 const STATUS_MAP = {
-  good:   { label: '특이사항없음', shortLabel: '양호', cssClass: 'good' },
-  normal: { label: '경미·관리필요', shortLabel: '경미', cssClass: 'normal' },
-  bad:    { label: '보수·교체권장', shortLabel: '보수', cssClass: 'bad' },
-  danger: { label: '즉시조치필요', shortLabel: '즉시', cssClass: 'danger' },
-  na:     { label: '해당없음',     shortLabel: 'N/A',  cssClass: 'na' },
+  good:   { label: '특이사항없음',   shortLabel: '특이사항없음', cssClass: 'good' },
+  normal: { label: '경미/관리필요',  shortLabel: '경미/관리',    cssClass: 'normal' },
+  bad:    { label: '보수/교체권장',  shortLabel: '보수/교체',    cssClass: 'bad' },
+  danger: { label: '즉시조치필요',   shortLabel: '즉시조치',     cssClass: 'danger' },
+  na:     { label: '해당없음',       shortLabel: '해당없음',     cssClass: 'na' },
 };
 
 // ==========================================
@@ -661,6 +661,9 @@ function mergeReports(baseReport, incomingReport) {
       mCd.opinion = mCd.opinion + '\n\n---\n' + inCd.opinion;
     }
 
+    // skippedNote: 비어있을 때만 import 값 채움
+    if (!mCd.skippedNote && inCd.skippedNote) mCd.skippedNote = inCd.skippedNote;
+
     // fixedTables: 빈 키만 복사
     mCd.fixedTables = mCd.fixedTables || {};
     Object.entries(inCd.fixedTables || {}).forEach(([k, v]) => {
@@ -1226,6 +1229,10 @@ function collectFormData() {
     if (opEl) cd.opinion = opEl.value;
     const opToggleEl = document.querySelector(`[data-opinion-toggle="${cat}"]`);
     if (opToggleEl) cd.opinionEnabled = opToggleEl.checked;
+
+    // skippedNote — 점검 생략 사유 (optional)
+    const skipEl = document.getElementById(`cat_skip_${cat}`);
+    if (skipEl) cd.skippedNote = skipEl.value;
 
     // fixedTables
     if (info.fixedTables) {

@@ -247,6 +247,37 @@
       min-height: 60px;
     }
 
+    /* 점검 생략 사유 (옵션 C) — 종합의견 하단 보조 입력 */
+    .cat-skip-wrap {
+      margin: 10px 4px 16px;
+      padding: 10px 12px;
+      background: #f4f7fb;
+      border-left: 3px solid #7a8fa3;
+      border-radius: 6px;
+    }
+    .cat-skip-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #4a6a8a;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .cat-skip-wrap textarea {
+      min-height: 44px;
+      width: 100%;
+      font-size: 12px;
+      padding: 6px 8px;
+      border: 1px solid #d8e2ec;
+      border-radius: 4px;
+      background: #ffffff;
+      color: #4a6a8a;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .cat-skip-wrap textarea::placeholder {
+      color: #aab8c2;
+    }
+
     /* 카드 단위 토글 (종합판단요약 / 전문가 분석의견) */
     .card-toggle-title {
       display: flex;
@@ -1527,10 +1558,10 @@ function createStatusGroup(container, name, currentValue) {
 
 function createStatusGroupShort(name, currentValue) {
   const statuses = [
-    { value: 'good', label: '양호', cls: 'good' },
-    { value: 'normal', label: '경미', cls: 'normal' },
-    { value: 'bad', label: '보수', cls: 'bad' },
-    { value: 'danger', label: '즉시', cls: 'danger' },
+    { value: 'good', label: '특이사항없음', cls: 'good' },
+    { value: 'normal', label: '경미/관리', cls: 'normal' },
+    { value: 'bad', label: '보수/교체', cls: 'bad' },
+    { value: 'danger', label: '즉시조치', cls: 'danger' },
     { value: 'na', label: '해당없음', cls: 'na' },
   ];
   return statuses.map(s => {
@@ -1556,7 +1587,7 @@ function refreshAutoAnalysis() {
 
   // 1. 카테고리별 판정 현황
   const catStats = Report.calcCategoryStats(report);
-  const statusLabels = { good: '양호', normal: '경미', bad: '보수', danger: '즉시', na: '해당없음' };
+  const statusLabels = { good: '특이사항없음', normal: '경미/관리', bad: '보수/교체', danger: '즉시조치', na: '해당없음' };
   const statusColors = { good: '#27ae60', normal: '#e67e22', bad: '#d35400', danger: '#c0392b', na: '#7a8fa3' };
 
   let catTableHTML = `
@@ -1587,19 +1618,19 @@ function refreshAutoAnalysis() {
     <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap">
       <div style="padding:8px 14px; border-radius:8px; background:rgba(39,174,96,0.1); text-align:center">
         <div style="font-size:18px; font-weight:700; color:#27ae60">${stats.good}</div>
-        <div style="font-size:10px; color:var(--text-muted)">양호</div>
+        <div style="font-size:10px; color:var(--text-muted)">특이사항없음</div>
       </div>
       <div style="padding:8px 14px; border-radius:8px; background:rgba(230,126,34,0.1); text-align:center">
         <div style="font-size:18px; font-weight:700; color:#e67e22">${stats.normal}</div>
-        <div style="font-size:10px; color:var(--text-muted)">경미</div>
+        <div style="font-size:10px; color:var(--text-muted)">경미/관리</div>
       </div>
       <div style="padding:8px 14px; border-radius:8px; background:rgba(211,84,0,0.1); text-align:center">
         <div style="font-size:18px; font-weight:700; color:#d35400">${stats.bad}</div>
-        <div style="font-size:10px; color:var(--text-muted)">보수</div>
+        <div style="font-size:10px; color:var(--text-muted)">보수/교체</div>
       </div>
       <div style="padding:8px 14px; border-radius:8px; background:rgba(192,57,43,0.1); text-align:center">
         <div style="font-size:18px; font-weight:700; color:#c0392b">${stats.danger}</div>
-        <div style="font-size:10px; color:var(--text-muted)">즉시</div>
+        <div style="font-size:10px; color:var(--text-muted)">즉시조치</div>
       </div>
       <div style="padding:8px 14px; border-radius:8px; background:rgba(255,255,255,0.05); text-align:center">
         <div style="font-size:18px; font-weight:700; color:var(--text-primary)">${total}</div>
@@ -1630,7 +1661,7 @@ function refreshAutoAnalysis() {
       </div>`;
   }
 
-  // 4. 주요 지적 항목 (보수/즉시 판정된 세부항목 목록)
+  // 4. 관리 권장 항목 (보수/즉시 판정된 세부항목 목록)
   let issueItems = [];
   const catData = report.categoryData || {};
   Object.entries(catData).forEach(([cat, cd]) => {
@@ -1645,11 +1676,11 @@ function refreshAutoAnalysis() {
   let issueHTML = '';
   if (issueItems.length > 0) {
     issueHTML = `
-      <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">주요 지적 항목 (보수/즉시)</div>
+      <div style="font-weight:600; margin-bottom:6px; color:var(--text-primary)">관리 권장 항목 (보수/즉시조치)</div>
       <div style="margin-bottom:16px">
         ${issueItems.map(item => `
           <div style="display:flex; align-items:center; gap:8px; padding:3px 0; font-size:11px">
-            <span style="color:${item.status === 'danger' ? '#c0392b' : '#d35400'}; font-weight:600; font-size:9px; padding:1px 6px; border-radius:4px; background:${item.status === 'danger' ? 'rgba(192,57,43,0.1)' : 'rgba(211,84,0,0.1)'}">${item.status === 'danger' ? '즉시' : '보수'}</span>
+            <span style="color:${item.status === 'danger' ? '#c0392b' : '#d35400'}; font-weight:600; font-size:9px; padding:1px 6px; border-radius:4px; background:${item.status === 'danger' ? 'rgba(192,57,43,0.1)' : 'rgba(211,84,0,0.1)'}">${item.status === 'danger' ? '즉시조치' : '보수/교체'}</span>
             <span style="color:var(--text-muted); font-size:10px">${item.cat}</span>
             <span style="font-weight:500">${item.name}</span>
           </div>
@@ -1925,6 +1956,14 @@ function renderDetailItems(report) {
       </div>
     `;
 
+    // ── 점검 생략 사유 textarea (옵션 C) — 비어 있으면 미리보기에도 노출 안 됨 ──
+    const skipHTML = `
+      <div class="cat-skip-wrap">
+        <label class="cat-skip-label" for="cat_skip_${cat}">점검 생략 사유 <span style="font-weight:400;color:#7a8fa3">(선택, 입력 시 미리보기에 안내 박스 표시)</span></label>
+        <textarea id="cat_skip_${cat}" rows="2" placeholder="예: 현장 일정 제약으로 결로 측정 미실시 — 별도 일정에 재점검 예정">${cd.skippedNote || ''}</textarea>
+      </div>
+    `;
+
     // ── 섹션 기반 렌더링 (테이블+카드 배치) ──
     let sectionsHTML = '';
     if (catInfo.sections) {
@@ -1970,6 +2009,7 @@ function renderDetailItems(report) {
       <div class="card-title">${catInfo.label} <span class="badge">${cat}</span></div>
       ${subGridHTML}
       ${opinionHTML}
+      ${skipHTML}
       ${sectionsHTML}
     `;
 
