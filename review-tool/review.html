@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>더보다 AI 검토 도구</title>
+  <link rel="stylesheet" href="assets/editor.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── 상단바 ────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div>
+        <span class="logo">더보다 AI</span>
+        <span class="logo-sub">검토 도구</span>
+      </div>
+      <div class="topbar-context" id="topbar-context">폴더를 선택해주세요</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" id="btn-reviews-list" style="display:none">📋 리뷰 목록</button>
+      <button class="btn btn-ghost btn-sm" id="btn-import-source">원본 가져오기</button>
+      <button class="btn btn-ghost btn-sm" id="btn-reload">↻ 새로고침</button>
+      <button class="btn btn-ghost btn-sm" id="btn-preview" disabled>미리보기</button>
+      <button class="btn btn-primary btn-sm" id="btn-export" disabled>최종본 내보내기</button>
+      <input type="file" id="source-file-input" accept=".json" style="display:none">
+    </div>
+  </header>
+
+  <!-- ── 본문 3-pane ────────────────────────────── -->
+  <main class="main">
+
+    <!-- 좌: 타임라인 -->
+    <aside class="pane timeline-pane" id="timeline-pane">
+      <div class="timeline-empty">폴더를 선택해주세요</div>
+    </aside>
+
+    <!-- 중: 에디터 -->
+    <section class="pane editor-pane" id="editor-pane">
+      <div class="onboard" id="onboard">
+        <div class="onboard-card">
+          <h2>더보다 AI 검토 도구</h2>
+          <p>
+            기존 웹 시스템에서 내보낸 보고서 JSON을 불러와<br>
+            Claude와 함께 타임라인 기반으로 편집·검토합니다.
+          </p>
+          <p>
+            먼저 <code>REPORT/review-tool/</code> 폴더를 선택해주세요.<br>
+            브라우저가 폴더 접근 권한을 묻습니다.
+          </p>
+          <button class="btn btn-primary" id="btn-pick-root">📁 폴더 선택</button>
+          <p id="onboard-unsupported" style="display:none; color:#f87171; margin-top:20px">
+            ⚠ 이 브라우저는 File System Access API를 지원하지 않습니다.<br>
+            <strong>Chrome</strong> 또는 <strong>Edge</strong> 를 사용해주세요.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 우: 사이드 패널 -->
+    <aside class="pane side-pane" id="side-pane">
+      <div class="side-section">
+        <div class="side-section-title">변경 요약</div>
+        <div class="change-empty">로드된 버전이 없습니다</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ── 상태바 ────────────────────────────────── -->
+  <footer class="statusbar">
+    <span id="status-left">대기 중</span>
+    <span class="spacer"></span>
+    <span id="status-shortcuts">Ctrl+S 저장</span>
+    <span id="status-perm">폴더 미선택</span>
+  </footer>
+
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── 스크립트 ─────────────────────────────────── -->
+<script src="assets/path-utils.js"></script>
+<script src="assets/sync.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/editor.js"></script>
+<script src="assets/timeline.js"></script>
+<script>
+// ==========================================
+// 메인 앱 로직
+// ==========================================
+
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, type = 'info', duration = 3000) {
+  const container = $('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+function escapeHTML(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ==========================================
+// 상단바 컨텍스트 업데이트
+// ==========================================
+function updateTopbarContext() {
+  const ctx = $('topbar-context');
+  const report = Store.state.currentReport;
+  if (!report) {
+    ctx.textContent = Sync.hasRoot() ? '리뷰 없음 — 원본을 가져오세요' : '폴더를 선택해주세요';
+    $('btn-preview').disabled = true;
+    $('btn-export').disabled = true;
+    return;
+  }
+  const vid = Store.state.viewingVersion;
+  const isActive = Store.isActiveVersion();
+  ctx.innerHTML = `<strong>${escapeHTML(report.meta.address)}</strong> · ${escapeHTML(vid)}${isActive ? ' ★' : ''}${Store.state.dirty ? ' <span style="color:#facc15">●</span>' : ''}`;
+  $('btn-preview').disabled = false;
+  $('btn-export').disabled = false;
+}
+
+// ==========================================
+// 사이드 패널 (변경 요약)
+//
+// dirty 상태일 때는 Store.viewingSnapshot(메모리 캐시) 기준으로
+// 동기 diff — 파일 I/O 없이 즉시 계산. 타이핑 성능 중요.
+// 부모 diff(비-dirty)는 파일 로드가 필요하지만 버전 전환 시에만 일어남.
+// ==========================================
+let _parentDiffCache = { reportId: null, versionId: null, diff: [], title: '' };
+
+async function renderSidePanel() {
+  const pane = $('side-pane');
+  const report = Store.state.currentReport;
+  const curr = Store.state.currentVersion;
+
+  if (!report || !curr) {
+    pane.innerHTML = `
+      <div class="side-section">
+        <div class="side-section-title">변경 요약</div>
+        <div class="change-empty">로드된 버전이 없습니다</div>
+      </div>
+    `;
+    return;
+  }
+
+  const viewingId = Store.state.viewingVersion;
+  const viewingEntry = report.meta.versions.find((v) => v.id === viewingId);
+  const parentId = viewingEntry ? viewingEntry.parentVersion : null;
+
+  let headerTitle;
+  let changes = [];
+
+  if (Store.state.dirty) {
+    // 드래프트 변경 — 동기 diff (스냅샷 vs 작업본)
+    headerTitle = `${viewingId} 기준 미저장 변경`;
+    if (Store.state.viewingSnapshot) {
+      changes = PathUtils.diff(Store.state.viewingSnapshot, curr);
+    }
+  } else if (parentId) {
+    // 부모 → 현재 diff — 캐시 활용 (같은 viewingId면 재사용)
+    headerTitle = `${parentId} → ${viewingId}`;
+    if (_parentDiffCache.reportId === report.reportId && _parentDiffCache.versionId === viewingId) {
+      changes = _parentDiffCache.diff;
+    } else {
+      try {
+        const base = await Sync.loadVersion(report.reportId, parentId);
+        changes = PathUtils.diff(base, curr);
+        _parentDiffCache = { reportId: report.reportId, versionId: viewingId, diff: changes, title: headerTitle };
+      } catch (e) {}
+    }
+  } else {
+    headerTitle = '원본 버전';
+  }
+
+  const truncate = (v, n = 80) => {
+    const s = typeof v === 'object' ? JSON.stringify(v) : String(v == null ? '' : v);
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  };
+
+  pane.innerHTML = `
+    <div class="side-section">
+      <div class="side-section-title">${escapeHTML(headerTitle)}</div>
+      ${changes.length === 0 ? `
+        <div class="change-empty">변경 없음</div>
+      ` : `
+        <div class="change-list">
+          ${changes.slice(0, 30).map((c) => `
+            <div class="change-item">
+              <div class="change-item-path">${escapeHTML(c.path)}</div>
+              <div class="change-item-diff">
+                ${c.before != null && c.before !== '' ? `<div class="change-before">${escapeHTML(truncate(c.before))}</div>` : ''}
+                ${c.after != null && c.after !== '' ? `<div class="change-after">${escapeHTML(truncate(c.after))}</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+          ${changes.length > 30 ? `<div class="change-empty">... ${changes.length - 30}건 더</div>` : ''}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// ==========================================
+// 폴더 선택 / 권한
+// ==========================================
+async function handlePickRoot() {
+  try {
+    await Sync.pickRoot();
+    updatePermissionStatus(true);
+    toast('폴더 연동 완료', 'success');
+    await showEditorOrOnboard();
+  } catch (err) {
+    toast('폴더 선택 취소 또는 실패: ' + err.message, 'error');
+  }
+}
+
+function updatePermissionStatus(ok) {
+  const el = $('status-perm');
+  if (ok) {
+    el.className = 'perm-ok';
+    el.textContent = '폴더 권한 ✓';
+  } else {
+    el.className = 'perm-needed';
+    el.textContent = '폴더 권한 필요 — 클릭해서 복원';
+    el.onclick = async () => {
+      try {
+        await Sync.ensurePermission();
+        updatePermissionStatus(true);
+        toast('권한 복원 완료', 'success');
+        await showEditorOrOnboard();
+      } catch (err) {
+        toast('권한 복원 실패: ' + err.message, 'error');
+      }
+    };
+  }
+}
+
+// ==========================================
+// 온보딩 / 에디터 표시 분기
+// ==========================================
+async function showEditorOrOnboard() {
+  const onboard = $('onboard');
+  const editorPane = $('editor-pane');
+
+  if (!Sync.isSupported()) {
+    $('onboard-unsupported').style.display = 'block';
+    $('btn-pick-root').style.display = 'none';
+    return;
+  }
+
+  if (!Sync.hasRoot()) {
+    if (onboard) onboard.style.display = 'flex';
+    return;
+  }
+
+  // 권한 확인 필요 (user gesture 에서만 작동하므로 실패해도 계속)
+  try {
+    await Sync.ensurePermission();
+    updatePermissionStatus(true);
+  } catch (e) {
+    updatePermissionStatus(false);
+    return;
+  }
+
+  // 리뷰 목록 로드
+  let reviews = [];
+  try {
+    reviews = await Sync.listReviews();
+  } catch (err) {
+    toast('리뷰 목록 로드 실패: ' + err.message, 'error');
+    return;
+  }
+
+  if (reviews.length === 0) {
+    // 원본 없음 안내
+    editorPane.innerHTML = `
+      <div class="onboard">
+        <div class="onboard-card">
+          <h2>첫 원본을 가져오세요</h2>
+          <p>
+            기존 웹(<code>theboda.io</code>)의 <strong>내보내기 (사진 포함)</strong>으로<br>
+            다운로드한 JSON 파일을 불러오면 검토를 시작할 수 있습니다.
+          </p>
+          <button class="btn btn-primary" onclick="document.getElementById('source-file-input').click()">
+            📥 원본 가져오기
+          </button>
+        </div>
+      </div>
+    `;
+    updateTopbarContext();
+    return;
+  }
+
+  // 최근 리뷰 또는 리스트 표시
+  if (reviews.length === 1 || !Store.state.currentReport) {
+    // 최신 자동 로드
+    if (!Store.state.currentReport) {
+      try {
+        await Store.loadReport(reviews[0].reportId);
+      } catch (err) {
+        toast('리뷰 로드 실패: ' + err.message, 'error');
+        return;
+      }
+    }
+  }
+
+  // 에디터/타임라인 마운트 (최초 1회만)
+  if (!editorPane.dataset.mounted) {
+    editorPane.innerHTML = '';
+    Editor.mount(editorPane);
+    Timeline.mount($('timeline-pane'));
+    editorPane.dataset.mounted = 'true';
+  }
+
+  // 폴더가 선택되어 있으면 목록 버튼 항상 노출
+  if (Sync.hasRoot()) {
+    $('btn-reviews-list').style.display = 'inline-flex';
+  }
+}
+
+// ==========================================
+// 원본 가져오기
+// ==========================================
+async function handleImportSource(file) {
+  if (!file) return;
+
+  // 진행 상황을 statusbar에 표시하면서 단계별로 어디서 실패했는지 추적
+  const setProgress = (msg) => {
+    $('status-left').textContent = msg;
+    console.log('[import]', msg);
+  };
+
+  let stage = '초기화';
+  try {
+    if (!Sync.hasRoot()) {
+      toast('먼저 폴더를 선택해주세요', 'warning');
+      return;
+    }
+
+    stage = '권한 확인';
+    setProgress('권한 확인 중...');
+    await Sync.ensurePermission();
+
+    stage = '파일 읽기';
+    setProgress(`파일 읽는 중... (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+    const text = await file.text();
+
+    stage = 'JSON 파싱';
+    setProgress('JSON 파싱 중...');
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error('JSON 파싱 실패 — 올바른 .json 파일인지 확인해주세요: ' + parseErr.message);
+    }
+    if (!data || !data.basic) {
+      throw new Error('올바른 보고서 JSON이 아닙니다 (basic 필드 없음)');
+    }
+
+    const imageCount = data._images ? Object.keys(data._images).length : 0;
+    toast(`파일 로드 완료 · 이미지 ${imageCount}장 · 저장 시작`, 'info', 2000);
+
+    stage = '리뷰 생성';
+    const meta = await Sync.createReview(data, (msg, detail) => {
+      setProgress(`${msg}${detail ? ' · ' + detail : ''}`);
+    });
+
+    stage = '스토어 로드';
+    setProgress('완료 처리 중...');
+    await Store.loadReport(meta.reportId);
+
+    stage = 'UI 갱신';
+    await showEditorOrOnboard();
+
+    setProgress('완료');
+    toast(`리뷰 생성 완료: ${meta.address}`, 'success');
+  } catch (err) {
+    console.error(`[import] 실패 @ ${stage}:`, err);
+    console.error('스택:', err.stack);
+    setProgress(`실패 @ ${stage}`);
+    // 에러 메시지 전체 + 스테이지 표시
+    const detail = err && err.message ? err.message : String(err);
+    toast(`가져오기 실패 @ ${stage}: ${detail}`, 'error', 8000);
+  }
+}
+
+// ==========================================
+// 리뷰 목록 / 관리 모달
+// ==========================================
+async function handleReviewsList() {
+  try {
+    const folders = await Sync.listAllReviewFolders();
+
+    const validCount = folders.filter((f) => f.valid).length;
+    const invalidCount = folders.length - validCount;
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" style="max-width:640px">
+        <div class="modal-header">
+          <div class="modal-title">리뷰 목록 / 관리</div>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          ${folders.length === 0 ? `
+            <div class="change-empty" style="padding:var(--sp-6)">아직 리뷰가 없습니다. 상단 [원본 가져오기]로 첫 리뷰를 시작하세요.</div>
+          ` : `
+            <div class="modal-hint" style="margin-top:0; margin-bottom:var(--sp-4)">
+              정상 ${validCount}건${invalidCount > 0 ? ` · <span style="color:#facc15">불완전 ${invalidCount}건</span>` : ''}
+            </div>
+            <div class="reviews-list">
+              ${folders.map((f) => renderReviewItem(f)).join('')}
+            </div>
+          `}
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="modal-refresh">↻ 새로고침</button>
+          <button class="btn btn-primary" id="modal-close-btn">닫기</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    const close = () => backdrop.remove();
+    backdrop.querySelector('.modal-close').addEventListener('click', close);
+    backdrop.querySelector('#modal-close-btn').addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+    // 새로고침
+    backdrop.querySelector('#modal-refresh').addEventListener('click', async () => {
+      close();
+      await handleReviewsList();
+    });
+
+    // 열기 버튼
+    backdrop.querySelectorAll('[data-action="open"]').forEach((el) => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = el.dataset.id;
+        try {
+          await Store.loadReport(id);
+          close();
+          await showEditorOrOnboard();
+          toast('리뷰 로드 완료', 'success');
+        } catch (err) {
+          toast('로드 실패: ' + err.message, 'error');
+        }
+      });
+    });
+
+    // 삭제 버튼
+    backdrop.querySelectorAll('[data-action="delete"]').forEach((el) => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = el.dataset.id;
+        const label = el.dataset.label || id;
+        if (!confirm(`"${label}" 리뷰를 영구 삭제합니다.\n\n이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?`)) return;
+        try {
+          await Sync.deleteReview(id);
+          toast('삭제 완료', 'success');
+          // 현재 로드된 리뷰가 삭제된 거면 상태 초기화
+          if (Store.state.currentReport && Store.state.currentReport.reportId === id) {
+            Store.state.currentReport = null;
+            Store.state.currentVersion = null;
+            Store.state.currentVersionId = null;
+            Store.state.viewingVersion = null;
+            Store.state.dirty = false;
+          }
+          close();
+          await handleReviewsList(); // 새로고침
+          await showEditorOrOnboard();
+        } catch (err) {
+          toast('삭제 실패: ' + err.message, 'error');
+        }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    toast('목록 로드 실패: ' + err.message, 'error');
+  }
+}
+
+function renderReviewItem(f) {
+  if (f.valid) {
+    const m = f.meta;
+    return `
+      <div class="reviews-list-item">
+        <div class="reviews-list-item-info">
+          <div class="reviews-list-item-address">${escapeHTML(m.address)}</div>
+          <div class="reviews-list-item-meta">
+            ${escapeHTML(m.reportNo || '(번호 없음)')} · ${m.versions.length}개 버전 · 활성 ${escapeHTML(m.activeVersion)} · ${formatDate(m.importedAt)}
+          </div>
+          <div class="reviews-list-item-meta" style="font-family:monospace; font-size:10px; opacity:0.6">${escapeHTML(f.reportId)}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-shrink:0">
+          <button class="btn btn-primary btn-sm" data-action="open" data-id="${escapeHTML(f.reportId)}">열기</button>
+          <button class="btn btn-ghost btn-sm" data-action="delete" data-id="${escapeHTML(f.reportId)}" data-label="${escapeHTML(m.address)}" style="color:#f87171">🗑 삭제</button>
+        </div>
+      </div>
+    `;
+  }
+  // 불완전 폴더 (meta.json 없음)
+  return `
+    <div class="reviews-list-item" style="border-color:rgba(250,204,21,0.3); background:rgba(250,204,21,0.05)">
+      <div class="reviews-list-item-info">
+        <div class="reviews-list-item-address" style="color:#facc15">⚠ 불완전 폴더 (손상)</div>
+        <div class="reviews-list-item-meta">meta.json 없음 — 이전 가져오기가 실패한 흔적일 수 있습니다</div>
+        <div class="reviews-list-item-meta" style="font-family:monospace; font-size:10px; opacity:0.6">${escapeHTML(f.reportId)}</div>
+      </div>
+      <div style="flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" data-action="delete" data-id="${escapeHTML(f.reportId)}" data-label="불완전 폴더: ${escapeHTML(f.reportId)}" style="color:#f87171">🗑 정리</button>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// 최종본 내보내기
+// ==========================================
+async function handleExport() {
+  const report = Store.state.currentReport;
+  if (!report) return;
+  try {
+    const { blob, filename } = await Sync.exportVersion(report.reportId, Store.state.viewingVersion);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`내보내기 완료: ${filename}`, 'success');
+  } catch (err) {
+    toast('내보내기 실패: ' + err.message, 'error');
+  }
+}
+
+// ==========================================
+// 새로고침 (디스크에서 재로드)
+// ==========================================
+async function handleReload() {
+  if (!Store.state.currentReport) return;
+  try {
+    await Store.reloadFromDisk();
+    toast('디스크에서 재로드 완료', 'success');
+  } catch (err) {
+    toast('재로드 실패: ' + err.message, 'error');
+  }
+}
+
+// ==========================================
+// 미리보기 (M3 — 간이)
+// ==========================================
+function handlePreview() {
+  toast('미리보기는 M3에서 구현됩니다. 현재는 기존 웹 preview.html을 사용해주세요.', 'info', 4000);
+}
+
+// ==========================================
+// 초기화
+// ==========================================
+async function init() {
+  // 이벤트 바인딩
+  $('btn-pick-root').addEventListener('click', handlePickRoot);
+  $('btn-import-source').addEventListener('click', () => $('source-file-input').click());
+  $('source-file-input').addEventListener('change', (e) => {
+    handleImportSource(e.target.files[0]);
+    e.target.value = '';
+  });
+  $('btn-reviews-list').addEventListener('click', handleReviewsList);
+  $('btn-export').addEventListener('click', handleExport);
+  $('btn-reload').addEventListener('click', handleReload);
+  $('btn-preview').addEventListener('click', handlePreview);
+
+  // Store 상태 변경 구독 → 상단바/사이드 패널 갱신
+  Store.subscribe(() => {
+    updateTopbarContext();
+    renderSidePanel();
+  });
+
+  // 지원 여부
+  if (!Sync.isSupported()) {
+    $('onboard-unsupported').style.display = 'block';
+    $('btn-pick-root').style.display = 'none';
+    $('status-perm').textContent = '브라우저 미지원';
+    return;
+  }
+
+  // 캐시된 핸들 복원 시도
+  const loaded = await Sync.init();
+  if (loaded) {
+    $('status-perm').textContent = '권한 확인 필요 — 클릭';
+    $('status-perm').className = 'perm-needed';
+    // 안내 화면에서 폴더 선택 버튼을 "권한 복원" 용도로 재사용
+    const btnPick = $('btn-pick-root');
+    btnPick.textContent = '📁 폴더 권한 복원';
+    btnPick.onclick = async () => {
+      try {
+        await Sync.ensurePermission();
+        updatePermissionStatus(true);
+        toast('권한 복원 완료', 'success');
+        await showEditorOrOnboard();
+      } catch (err) {
+        toast('권한 복원 실패. 폴더를 다시 선택해주세요: ' + err.message, 'error');
+        // 새로 선택 플로우로 전환
+        btnPick.textContent = '📁 폴더 선택';
+        btnPick.onclick = handlePickRoot;
+      }
+    };
+  }
+
+  updateTopbarContext();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
