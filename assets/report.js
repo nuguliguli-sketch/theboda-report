@@ -1058,22 +1058,13 @@ function calcCategoryStats(report) {
     const cnt = { good: 0, normal: 0, bad: 0, danger: 0, na: 0 };
     let total = 0;
 
+    // "전체 항목 수"는 카테고리 정의(subItems) 기반의 subStatuses만 집계.
+    // 카드의 subJudgments는 "추가 발견 사항"으로, 총합에 포함하지 않음
+    // (관리 권장 항목 표는 preview.html에서 별도 로직으로 subJudgments를 순회해 노출)
+    // → 세부진단 결과표의 '전체' 컬럼과 APPENDIX 카테고리 항목 수가 일치하도록 정합성 확보
     Object.values(subs).forEach(st => {
       total++;
       if (cnt[st] !== undefined) cnt[st]++;
-    });
-
-    // 카드의 세부 판정도 포함
-    const allCards = [];
-    if (cd.cards) allCards.push(...cd.cards);
-    if (cd.cardSlots) {
-      Object.values(cd.cardSlots).forEach(slotCards => allCards.push(...(slotCards || [])));
-    }
-    allCards.forEach(card => {
-      (card.subJudgments || []).forEach(sj => {
-        total++;
-        if (cnt[sj.status] !== undefined) cnt[sj.status]++;
-      });
     });
 
     result[cat] = { ...cnt, total, label: info.label };

@@ -539,6 +539,64 @@
     @media print {
       #preview-floorplan { max-height: 60mm !important; }
       #preview-floorplan img { max-height: 60mm !important; }
+
+      /* ──────────────────────────────────────────────
+       * 표지 PDF 출력 수리 (Chrome/Edge 인쇄 엔진 대응)
+       *
+       * 문제:
+       *  1. backdrop-filter: blur()는 print 미지원 → cover-glass 박스가 사실상 사라짐
+       *  2. Chrome이 흰 텍스트에 color-adjust: economy 적용 시 텍스트가 날아감
+       *  3. rgba 반투명 배경이 기기에 따라 완전히 투명으로 렌더될 수 있음
+       *
+       * 해결:
+       *  - print-color-adjust: exact 강제 (잉크 절약 방지)
+       *  - backdrop-filter 제거
+       *  - 박스 배경을 solid 색으로 대체 (Brand Deep보다 약간 밝은 톤)
+       *  - 모든 텍스트 색상 solid 지정
+       * ────────────────────────────────────────────── */
+      .cover-page,
+      .cover-page * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      .cover-page {
+        background: #1a3669 !important;
+      }
+      .cover-page .cover-glass {
+        background: #223d72 !important;            /* Brand Deep 위에 올라간 반투명 흰색 대체 solid */
+        border: 0.4mm solid #3d5a8e !important;    /* 원본 rgba(255,255,255,0.12) 대체 */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: 0 2mm 8mm rgba(0,0,0,0.18) !important;
+      }
+      .cover-page .cover-accent-line {
+        background: #4a90d9 !important;
+      }
+      .cover-page .cover-doc-label {
+        color: #c5d4e8 !important;
+      }
+      .cover-page .cover-title {
+        color: #ffffff !important;
+      }
+      .cover-page .cover-subtitle {
+        color: #a5bad4 !important;
+      }
+      .cover-page .cover-address {
+        color: #e4ecf7 !important;
+      }
+      .cover-page .cover-info-item {
+        border-bottom: 0.2mm solid #3d5a8e !important;
+      }
+      .cover-page .cover-info-label {
+        color: #a5bad4 !important;
+      }
+      .cover-page .cover-info-value {
+        color: #ffffff !important;
+      }
+      .cover-page .cover-bottom-left {
+        color: #8fa5c0 !important;
+      }
     }
   </style>
 </head>
@@ -713,6 +771,25 @@ async function renderReport() {
     totalStats.total  += s.total  || 0;
   });
 
+  // 해당없음(na) 분류 — skippedNote 보유 카테고리의 na는 "방침상 생략",
+  // 나머지는 "설비 부재"로 근사 분류 (카테고리 단위 휴리스틱)
+  // 세부 혼재 가능하나 고객이 두 성격의 차이를 인지할 수 있도록 개괄 구분
+  let naSkipped = 0;
+  let naMissing = 0;
+  Object.values(report.categoryData || {}).forEach(cd => {
+    const hasSkipNote = (cd.skippedNote || '').trim() !== '';
+    const naCount = Object.values(cd.subStatuses || {}).filter(s => s === 'na').length;
+    if (hasSkipNote) naSkipped += naCount;
+    else naMissing += naCount;
+  });
+  const naBreakdownText = totalStats.na > 0
+    ? (naSkipped > 0 && naMissing > 0
+        ? ` · 해당없음 ${totalStats.na}개 (본 진단 생략 ${naSkipped} · 설비 부재 ${naMissing})`
+        : naSkipped > 0
+          ? ` · 해당없음 ${totalStats.na}개 (본 진단 생략)`
+          : ` · 해당없음 ${totalStats.na}개 (설비 부재)`)
+    : '';
+
   // 긴급 조치/보수 필요 카테고리 목록 추출
   const dangerCats = [];
   const badCats = [];
@@ -730,41 +807,55 @@ async function renderReport() {
   }).length;
 
   // ── Page 1: 표지 (모던 풀배경) ──
+  // 인라인 스타일은 외부 CSS(!important 포함)까지 이김 → PDF 인쇄 시 backdrop-filter 렌더 실패·
+  // color-adjust economy 등 Chrome 인쇄 엔진 이슈를 확실히 우회
   pages.push(`
-    <div class="report-page cover-page">
+    <div class="report-page cover-page" style="background:#4e6a85 !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; position:relative; overflow:hidden">
       <span class="page-label no-print">표지</span>
-      <div class="cover-top">
-        <div class="cover-doc-label">BUILDING INSPECTION REPORT</div>
+
+      <!-- 인증 도장 이미지 — 하단 45%에 작게, 매우 연하게 -->
+      <img src="assets/cover-certificate.jpg"
+           alt=""
+           onerror="this.style.display='none'"
+           style="position:absolute; left:0; right:0; bottom:0; width:100%; height:45%; object-fit:cover; object-position:left center; opacity:0.2; mix-blend-mode:luminosity; pointer-events:none; z-index:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0%, black 40%); mask-image:linear-gradient(to bottom, transparent 0%, black 40%); -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important">
+
+      <!-- 상단 바: 좌측 라벨 + 우측 URL -->
+      <div style="position:relative; z-index:2; display:flex; justify-content:space-between; align-items:center; padding:44px 52px 0">
+        <div style="color:rgba(255,255,255,0.5); font-size:11.5px; font-weight:600; letter-spacing:0.14em">INSPECTION REPORT</div>
+        <div style="color:rgba(255,255,255,0.45); font-size:11px; letter-spacing:0.03em">home.theboda.io</div>
       </div>
-      <div class="cover-hero">
-        <div class="cover-glass">
-          <div class="cover-accent-line"></div>
-          <div class="cover-title">주택 진단 보고서</div>
-          <div class="cover-subtitle">Housing Inspection Report</div>
-          <div class="cover-address">${val(report.basic.address, '')}<br>${val(report.basic.unit, '')}</div>
-          <div class="cover-info-grid">
-            <div class="cover-info-item">
-              <div class="cover-info-label">진단일자</div>
-              <div class="cover-info-value">${val(report.basic.inspectionDate, '-')}</div>
+
+      <!-- 중앙 상단: 정보 박스 — 중앙에 가까운 상단, 넉넉한 여백 -->
+      <div style="position:relative; z-index:2; flex:1; display:flex; align-items:center; justify-content:center; padding:0 56px 64px">
+        <div class="cover-glass" style="background:rgba(255,255,255,0.12) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; border:1px solid rgba(255,255,255,0.18) !important; border-radius:18px !important; box-shadow:0 12px 44px rgba(0,0,0,0.15) !important; padding:44px 50px 40px !important; width:100%; max-width:460px; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important">
+          <div style="width:36px; height:3px; background:#6aaee8; border-radius:2px; margin-bottom:20px"></div>
+          <div style="font-size:28px; font-weight:700; color:#ffffff !important; letter-spacing:-0.02em; line-height:1.25; margin-bottom:5px">주택 진단 보고서</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.45) !important; letter-spacing:0.08em; font-weight:400; margin-bottom:32px">Housing Inspection Report</div>
+          <div style="font-size:13.5px; color:rgba(255,255,255,0.88) !important; font-weight:500; margin-bottom:32px; line-height:1.65">${val(report.basic.address, '')}<br>${val(report.basic.unit, '')}</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0">
+            <div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06)">
+              <div style="font-size:7.5px; color:rgba(255,255,255,0.45) !important; letter-spacing:0.06em; margin-bottom:3px">진단일자</div>
+              <div style="font-size:12px; font-weight:600; color:#ffffff !important">${val(report.basic.inspectionDate, '-')}</div>
             </div>
-            <div class="cover-info-item">
-              <div class="cover-info-label">의뢰인</div>
-              <div class="cover-info-value">${val(report.basic.clientName, '-')}</div>
+            <div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06)">
+              <div style="font-size:7.5px; color:rgba(255,255,255,0.45) !important; letter-spacing:0.06em; margin-bottom:3px">의뢰인</div>
+              <div style="font-size:12px; font-weight:600; color:#ffffff !important">${val(report.basic.clientName, '-')}</div>
             </div>
-            <div class="cover-info-item">
-              <div class="cover-info-label">진단자</div>
-              <div class="cover-info-value">${val(report.basic.inspectorName, '-')}</div>
+            <div style="padding:10px 0">
+              <div style="font-size:7.5px; color:rgba(255,255,255,0.45) !important; letter-spacing:0.06em; margin-bottom:3px">진단자</div>
+              <div style="font-size:12px; font-weight:600; color:#ffffff !important">${val(report.basic.inspectorName, '-')}</div>
             </div>
-            <div class="cover-info-item">
-              <div class="cover-info-label">보고서 번호</div>
-              <div class="cover-info-value">${val(report.basic.reportNo, '-')}</div>
+            <div style="padding:10px 0">
+              <div style="font-size:7.5px; color:rgba(255,255,255,0.45) !important; letter-spacing:0.06em; margin-bottom:3px">보고서 번호</div>
+              <div style="font-size:12px; font-weight:600; color:#ffffff !important">${val(report.basic.reportNo, '-')}</div>
             </div>
           </div>
         </div>
       </div>
-      <div class="cover-bottom">
-        <div class="cover-bottom-left">더보다 AI<br>home.theboda.io</div>
-        <img src="assets/ci-logo-light.png" alt="더보다" class="cover-bottom-logo">
+
+      <!-- 하단: 우측 로고만 -->
+      <div style="position:relative; z-index:2; padding:0 52px 40px; display:flex; justify-content:flex-end; align-items:flex-end">
+        <img src="assets/theboda대지 1_2logo.png" alt="더보다 AI" style="height:36px; opacity:0.8; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important" onerror="this.style.display='none'">
       </div>
     </div>
   `);
@@ -871,18 +962,89 @@ async function renderReport() {
       </div>
     </div>
     <div style="font-size:8.5px; color:#7a8fa3; text-align:right; margin-bottom:14px">
-      전체 ${totalStats.total || 0}개 점검 항목 기준${totalStats.na > 0 ? ` · 해당없음 ${totalStats.na}개 별도` : ''}
+      전체 ${totalStats.total || 0}개 점검 항목 기준${naBreakdownText}
     </div>
 
-    <div style="padding:11px 14px; background:#f4f7fb; border-radius:6px; border-left:3px solid #4a90d9">
+    <div style="padding:11px 14px; background:#f4f7fb; border-radius:6px; border-left:3px solid #4a90d9; page-break-inside:avoid">
       <div style="font-size:9px; color:#4a6a8a; line-height:1.6">
-        <strong style="color:#0a1628">읽는 순서 안내</strong> — 다음 페이지 <strong>목차</strong>에서 전체 구조를 확인하시고, 자세한 내용은 <strong>Part 02 종합 지표</strong> → <strong>Part 03 세부 진단</strong> 순으로 읽으시면 됩니다. 판정 등급의 의미는 <strong>판정 기준 안내</strong> 페이지를 참고해주세요.
+        <strong style="color:#0a1628">읽는 순서 안내</strong> — 다음 페이지 <strong>공사 우선순위 로드맵</strong>에서 부분 리모델링 단계별 가이드를 먼저 확인하시고, 이어지는 <strong>목차</strong>에서 전체 구조를 파악하신 뒤 <strong>Part 02 종합 지표</strong> → <strong>Part 03 세부 진단</strong> 순으로 읽어 주시기 바랍니다. 판정 등급의 의미와 점검 범위·한계는 Part 02 첫 페이지의 <strong>판정 기준 안내</strong>에서 확인하실 수 있으며, 본 보고서의 핵심 용어는 세부진단 결과표 상단 용어 박스에 정리되어 있습니다.
       </div>
     </div>
 
     ${pageFooter(report, pageNum)}
   `));
   pageNum++;
+
+  // ── Page 2b: 공사 우선순위 로드맵 (신규) ──
+  // summary.priorityActions의 【N단계 · 테마】 형식을 파싱하여 4단계 카드로 시각화
+  // 부분 리모델링 의사결정 가이드 — Executive Summary 직후 배치
+  const priorityActionsText = (sum.priorityActions || '').trim();
+  if (priorityActionsText) {
+    const tierColors = {
+      '1': { bg: '#fff0f0', border: '#c0392b', numBg: '#c0392b', textColor: '#c0392b' },
+      '2': { bg: '#fff8e1', border: '#d35400', numBg: '#d35400', textColor: '#d35400' },
+      '3': { bg: '#fffbea', border: '#e67e22', numBg: '#e67e22', textColor: '#b35a00' },
+      '4': { bg: '#f0f7ff', border: '#4a90d9', numBg: '#4a90d9', textColor: '#1a3669' }
+    };
+    const tiers = [];
+    priorityActionsText.split('【').forEach(part => {
+      if (!part.trim()) return;
+      const endIdx = part.indexOf('】');
+      if (endIdx === -1) return;
+      const headerRaw = part.slice(0, endIdx).trim();
+      const body = part.slice(endIdx + 1);
+      const numMatch = headerRaw.match(/^(\d+)단계/);
+      const tierNum = numMatch ? numMatch[1] : '';
+      const tierLabel = headerRaw.replace(/^\d+단계\s*[·]\s*/, '').trim();
+      let subtitle = '';
+      const items = [];
+      body.split('\n').forEach(line => {
+        const t = line.trim();
+        if (!t) return;
+        if (t.startsWith('(') && /\)$/.test(t) && !t.startsWith('- ')) {
+          subtitle = t.replace(/^\(|\)$/g, '');
+        } else if (t.startsWith('- ')) {
+          items.push(t.slice(2).trim());
+        }
+      });
+      tiers.push({ tierNum, tierLabel, subtitle, items });
+    });
+
+    if (tiers.length > 0) {
+      pages.push(pageWrap(pageNum, `
+        ${pageHeader(report, '공사 우선순위 로드맵')}
+        <div style="font-size:10px; color:#4a6a8a; line-height:1.65; margin-bottom:14px">
+          부분 리모델링 의사결정을 돕기 위해, 본 진단에서 확인된 조치 필요 항목을 <strong>안전·긴급도 → 보수 → 성능 개선 → 선택적 업그레이드</strong> 순으로 정리한 4단계 로드맵입니다. 각 단계는 공사 병행 효율과 2차 피해 예방을 함께 고려해 묶었습니다.
+        </div>
+        <div style="display:flex; flex-direction:column; gap:9px">
+          ${tiers.map(t => {
+            const c = tierColors[t.tierNum] || tierColors['4'];
+            return `
+              <div style="padding:11px 14px 9px; background:${c.bg}; border-left:4px solid ${c.border}; border-radius:8px; page-break-inside:avoid">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px">
+                  <div style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:${c.numBg}; color:#ffffff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; line-height:1">${escapeHTML(t.tierNum)}</div>
+                  <div style="flex:1">
+                    <div style="font-size:11px; font-weight:700; color:${c.textColor}; line-height:1.3">${escapeHTML(t.tierLabel)}</div>
+                    ${t.subtitle ? `<div style="font-size:8.5px; color:#4a6a8a; margin-top:1px">${escapeHTML(t.subtitle)}</div>` : ''}
+                  </div>
+                </div>
+                <ul style="margin:0; padding-left:18px; font-size:9.5px; color:#4a6a8a; line-height:1.65">
+                  ${t.items.map(item => `<li style="margin-bottom:2px">${escapeHTML(item)}</li>`).join('')}
+                </ul>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="margin-top:11px; padding:9px 13px; background:#f4f7fb; border-left:3px solid #7a8fa3; border-radius:6px">
+          <div style="font-size:8.5px; color:#4a6a8a; line-height:1.6">
+            <strong style="color:#0a1628">활용 안내</strong> — 1·2단계는 지금 당장 공사를 하지 않더라도 상태 악화·2차 피해 예방을 위해 우선적으로 검토해야 하는 항목입니다. 3단계는 리모델링 본공사와 함께 진행할 때 비용 효율이 가장 높으며, 4단계는 현재 기능상 문제가 없어 예산·일정에 따라 선택 가능한 항목입니다.
+          </div>
+        </div>
+        ${pageFooter(report, pageNum)}
+      `));
+      pageNum++;
+    }
+  }
 
   // ── Page 3: 목차 (TOC — 실제 내용은 렌더 후 동적 생성) ──
   // 이 시점에는 placeholder만 넣고, splitOverflowPages 이후 buildTOC()가 실제 항목 주입
@@ -943,10 +1105,6 @@ async function renderReport() {
         <td class="label-cell">현재 거주상태</td><td colspan="3">${val(b.currentOccupancy)}</td>
       </tr>
     </table>
-    ${b.managementIssues ? `
-      <div class="rpt-section-title">단지관리 이슈</div>
-      <div style="font-size:10px; color:#4a6a8a; line-height:1.7; white-space:pre-wrap">${escapeHTML(b.managementIssues)}</div>
-    ` : ''}
     <div class="rpt-section-title">평면도</div>
     <div id="preview-floorplan" style="max-height:240px; background:#f4f7fb; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px">
       <span style="font-size:9px; color:#aab8c2">평면도 로딩중...</span>
@@ -1172,7 +1330,8 @@ async function renderReport() {
   });
 
   // 관리 권장 항목 (보수/교체·즉시조치로 판정된 항목 목록)
-  // calcCategoryStats와 동일 규칙으로 subStatuses + 카드 subJudgments 모두 포함
+  // subStatuses + 카드 subJudgments 모두 포함. 카드 subJudgments는 위치(카드 title) 병기로
+  // 동일 이름의 항목(예: "목재 문틀 부식" x 공용/부부)이 구분되도록 함.
   const issueItemsP = [];
   Object.entries(report.categoryData || {}).forEach(([cat, cd]) => {
     const catLabel = (Report.CATEGORIES[cat] || {}).label || cat;
@@ -1184,16 +1343,29 @@ async function renderReport() {
       }
     });
 
-    // 카드 subJudgments도 순회
+    // 카드 subJudgments도 순회 (같은 이름이 여러 카드에 있을 경우 카드 제목 병기)
     const allCards = [];
     if (cd.cards) allCards.push(...cd.cards);
     if (cd.cardSlots) {
       Object.values(cd.cardSlots).forEach(slotCards => allCards.push(...(slotCards || [])));
     }
+    // 같은 sj.name이 여러 카드에 등장하는지 사전 집계
+    const nameCount = {};
     allCards.forEach(card => {
       (card.subJudgments || []).forEach(sj => {
         if (sj.status === 'bad' || sj.status === 'danger') {
-          issueItemsP.push({ cat: catLabel, name: sj.name, status: sj.status });
+          nameCount[sj.name] = (nameCount[sj.name] || 0) + 1;
+        }
+      });
+    });
+    allCards.forEach(card => {
+      (card.subJudgments || []).forEach(sj => {
+        if (sj.status === 'bad' || sj.status === 'danger') {
+          // 중복 이름은 카드 제목 병기로 구분
+          const displayName = (nameCount[sj.name] > 1 && card.title)
+            ? `${sj.name} (${card.title})`
+            : sj.name;
+          issueItemsP.push({ cat: catLabel, name: displayName, status: sj.status });
         }
       });
     });
@@ -1218,6 +1390,9 @@ async function renderReport() {
     ` : ''}
 
     <div class="rpt-section-title">진단 통계</div>
+    <div style="font-size:9px; color:#4a6a8a; line-height:1.55; margin-bottom:8px">
+      Executive Summary(한눈에 보는 진단 요약)에서 제시한 총괄 수치를 재확인합니다. 카테고리별 분해 현황과 관리 권장 세부 항목은 아래 표에서 이어서 확인하실 수 있습니다.
+    </div>
     <div style="display:flex; gap:10px; margin-bottom:6px">
       ${Object.entries(statusLabelsP).map(([k, label]) => `
         <div style="flex:1; text-align:center; padding:8px 4px; background:${statusColorsP[k]}10; border-radius:6px; border:1px solid ${statusColorsP[k]}30">
@@ -1227,7 +1402,7 @@ async function renderReport() {
       `).join('')}
     </div>
     <div style="font-size:8.5px; color:#7a8fa3; text-align:right; margin-bottom:14px">
-      전체 ${totalStats.total || 0}개 점검 항목 기준${totalStats.na > 0 ? ` · 해당없음 ${totalStats.na}개 별도` : ''}
+      전체 ${totalStats.total || 0}개 점검 항목 기준${naBreakdownText} · 상세 내역은 아래 카테고리별 현황 참조
     </div>
 
     <div class="rpt-section-title">카테고리별 현황</div>
@@ -1304,6 +1479,12 @@ async function renderReport() {
         <div class="expert-box-title">성능 및 거주체감</div>
         <div class="expert-box-text">${val(exp.livingPerformance)}</div>
       </div>
+      ${b.managementIssues ? `
+        <div class="expert-box" style="border-left-color:#7a8fa3; background:#f4f7fb">
+          <div class="expert-box-title" style="color:#4a6a8a">참고 — 단지 관리 및 정비사업 동향</div>
+          <div class="expert-box-text" style="white-space:pre-wrap">${escapeHTML(b.managementIssues)}</div>
+        </div>
+      ` : ''}
       ${pageFooter(report, pageNum)}
     `));
     pageNum++;
@@ -1325,6 +1506,17 @@ async function renderReport() {
 
   pages.push(pageWrap(pageNum, `
     ${pageHeader(report, '세부진단 결과표')}
+
+    <div style="margin-bottom:12px; padding:10px 14px; background:#f4f7fb; border-radius:6px; border-left:3px solid #4a90d9">
+      <div style="font-size:9px; font-weight:700; color:#1a3669; letter-spacing:0.03em; margin-bottom:5px">본문 주요 용어 안내</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; font-size:8.5px; color:#4a6a8a; line-height:1.55">
+        <div><strong style="color:#0a1628">PPC 배관</strong> — Polypropylene Copolymer. 1990년대 구축 아파트에 일부 사용된 폴리프로필렌 합성수지 난방배관으로, 장기 사용 시 내열·내구 성능 저하가 보고되는 재질</div>
+        <div><strong style="color:#0a1628">도막 방수</strong> — 바탕면에 액상 방수재를 도포하여 이음매 없는 방수막을 형성하는 공법. 욕실·발코니 등 누수 취약부 전면 보수 시 주로 적용</div>
+        <div><strong style="color:#0a1628">ELB / MCB</strong> — ELB는 누전차단기(Earth Leakage Breaker, 누전 시 차단), MCB는 배선용 차단기(Miniature Circuit Breaker, 과전류 차단). 분전반의 주요 보호 장치</div>
+        <div><strong style="color:#0a1628">열교 (Thermal Bridge)</strong> — 단열재가 끊기거나 얇아진 구조적 취약 지점에서 열이 집중 이동해 내부 표면 온도가 낮아지는 현상. 결로·곰팡이의 주요 원인</div>
+      </div>
+    </div>
+
     <table class="info-table">
       <thead>
         <tr>
