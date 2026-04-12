@@ -372,11 +372,13 @@
         ${fieldInput('난방배관', 'indicators.heatingPipeCost', i.heatingPipeCost)}
         ${fieldInput('욕실방수', 'indicators.bathroomWaterproofCost', i.bathroomWaterproofCost)}
         ${fieldInput('창호외부', 'indicators.windowExteriorCost', i.windowExteriorCost)}
+        ${fieldInput('전기공사', 'indicators.electricalCost', i.electricalCost)}
         ${fieldInput('급배수', 'indicators.plumbingCost', i.plumbingCost)}
       </div>
       ${fieldTextarea('난방배관 코멘트', 'indicators.heatingPipeComment', i.heatingPipeComment)}
       ${fieldTextarea('욕실방수 코멘트', 'indicators.bathroomWaterproofComment', i.bathroomWaterproofComment)}
       ${fieldTextarea('창호외부 코멘트', 'indicators.windowExteriorComment', i.windowExteriorComment)}
+      ${fieldTextarea('전기공사 코멘트', 'indicators.electricalCostComment', i.electricalCostComment)}
       ${fieldTextarea('급배수 코멘트', 'indicators.plumbingComment', i.plumbingComment)}
 
       ${sectionHeader('총 예상 보수 비용 (만원)', '')}

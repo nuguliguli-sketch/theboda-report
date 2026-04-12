@@ -310,10 +310,12 @@ function createDefaultReport() {
       heatingPipeCost: '',
       bathroomWaterproofCost: '',
       windowExteriorCost: '',
+      electricalCost: '',
       plumbingCost: '',
       heatingPipeComment: '',
       bathroomWaterproofComment: '',
       windowExteriorComment: '',
+      electricalCostComment: '',
       plumbingComment: '',
       repairCostMin: '',
       repairCostMax: '',
@@ -1109,8 +1111,8 @@ function collectFormData() {
   // indicators - text/number
   ['gasSafetyComment', 'electricalSafetyComment', 'structuralSafetyComment',
    'sunlightGrade', 'opennessGrade', 'solarGrade',
-   'heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'plumbingCost',
-   'heatingPipeComment', 'bathroomWaterproofComment', 'windowExteriorComment', 'plumbingComment',
+   'heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'electricalCost', 'plumbingCost',
+   'heatingPipeComment', 'bathroomWaterproofComment', 'windowExteriorComment', 'electricalCostComment', 'plumbingComment',
    'repairCostMin', 'repairCostMax'
   ].forEach(k => {
     const el = document.getElementById(`indicators_${k}`);
@@ -1299,8 +1301,8 @@ function fillForm(report) {
   // indicators - text/number
   ['gasSafetyComment', 'electricalSafetyComment', 'structuralSafetyComment',
    'sunlightGrade', 'opennessGrade', 'solarGrade',
-   'heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'plumbingCost',
-   'heatingPipeComment', 'bathroomWaterproofComment', 'windowExteriorComment', 'plumbingComment',
+   'heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'electricalCost', 'plumbingCost',
+   'heatingPipeComment', 'bathroomWaterproofComment', 'windowExteriorComment', 'electricalCostComment', 'plumbingComment',
    'repairCostMin', 'repairCostMax'
   ].forEach(k => {
     const el = document.getElementById(`indicators_${k}`);

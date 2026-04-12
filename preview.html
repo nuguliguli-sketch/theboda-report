@@ -1257,6 +1257,11 @@ async function renderReport() {
         <td colspan="2" style="font-size:9px">${val(ind.windowExteriorComment, '')}</td>
       </tr>
       <tr>
+        <td class="label-cell">전기 공사</td>
+        <td>${renderCost(ind.electricalCost)}</td>
+        <td colspan="2" style="font-size:9px">${val(ind.electricalCostComment, '')}</td>
+      </tr>
+      <tr>
         <td class="label-cell">급수/배수 배관</td>
         <td>${renderCost(ind.plumbingCost)}</td>
         <td colspan="2" style="font-size:9px">${val(ind.plumbingComment, '')}</td>

@@ -1301,6 +1301,14 @@
               <input type="text" id="indicators_windowExteriorComment" placeholder="의견">
             </div>
             <div class="form-group">
+              <label>전기 공사 예상비용</label>
+              <input type="text" id="indicators_electricalCost" placeholder="예) 150~300만원">
+            </div>
+            <div class="form-group">
+              <label>전기 의견</label>
+              <input type="text" id="indicators_electricalCostComment" placeholder="의견">
+            </div>
+            <div class="form-group">
               <label>급수/배수 배관 예상비용</label>
               <input type="text" id="indicators_plumbingCost" placeholder="예) 100~250만원">
             </div>
@@ -2632,7 +2640,7 @@ function removeSubJudgment(btn) {
 // 비용 자동합산
 // ==========================================
 function calcRepairCostTotal() {
-  const costIds = ['heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'plumbingCost'];
+  const costIds = ['heatingPipeCost', 'bathroomWaterproofCost', 'windowExteriorCost', 'electricalCost', 'plumbingCost'];
   let totalMin = 0, totalMax = 0, hasAny = false;
 
   costIds.forEach(id => {
