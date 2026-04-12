@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>더보다 | 인테리어 범위 설정</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand-blue:#4a90d9;--brand-deep:#1a3669;--brand-light:#6aaee8;
+  --text-primary:#0a1628;--text-secondary:#4a6a8a;--text-muted:#8a9bb5;
+  --bg-page:#ffffff;--bg-section:#f4f7fb;--bg-card:#ffffff;
+  --border:#e2e8f0;--border-active:#4a90d9;
+  --severity-high:#c0392b;--severity-high-bg:#fff0f0;
+  --severity-mid:#e67e22;--severity-mid-bg:#fff8e1;
+  --severity-low:#27ae60;--severity-low-bg:#f0fff4;
+  --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-full:9999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.12);
+  --transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;
+  color:var(--text-primary);background:var(--bg-section);
+  line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+
+/* ── Layout ── */
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:280px;background:var(--brand-deep);color:#fff;
+  padding:32px 24px;position:fixed;top:0;left:0;height:100vh;
+  display:flex;flex-direction:column;z-index:100;
+  transition:transform .3s ease;
+}
+.main{margin-left:280px;flex:1;padding:32px 40px 100px;max-width:900px}
+
+/* ── Sidebar ── */
+.logo{font-size:1.2rem;font-weight:700;margin-bottom:8px;letter-spacing:-.02em}
+.logo-sub{font-size:.78rem;color:rgba(255,255,255,.55);margin-bottom:40px}
+.step-list{list-style:none;flex:1}
+.step-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border-radius:var(--radius-sm);cursor:pointer;
+  margin-bottom:4px;transition:var(--transition);
+  font-size:.88rem;color:rgba(255,255,255,.5);
+}
+.step-item:hover{background:rgba(255,255,255,.08)}
+.step-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.step-item.done{color:rgba(255,255,255,.7)}
+.step-item.hidden{display:none}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;flex-shrink:0;
+  border:2px solid rgba(255,255,255,.2);transition:var(--transition);
+}
+.step-item.active .step-num{border-color:var(--brand-blue);background:var(--brand-blue)}
+.step-item.done .step-num{border-color:var(--severity-low);background:var(--severity-low)}
+.step-item.done .step-num::after{content:'✓'}
+.sidebar-footer{
+  padding-top:20px;border-top:1px solid rgba(255,255,255,.1);
+  font-size:.75rem;color:rgba(255,255,255,.35);
+}
+
+/* ── Bottom Nav Bar ── */
+.bottom-bar{
+  position:fixed;bottom:0;left:280px;right:0;
+  background:var(--bg-card);border-top:1px solid var(--border);
+  padding:16px 40px;display:flex;align-items:center;justify-content:space-between;
+  z-index:90;box-shadow:0 -4px 12px rgba(0,0,0,.06);
+}
+.bar-info{font-size:.85rem;color:var(--text-secondary)}
+.bar-info strong{color:var(--text-primary)}
+.nav-buttons{display:flex;gap:12px}
+
+/* ── Buttons ── */
+.btn{
+  padding:10px 24px;border-radius:var(--radius-sm);font-size:.88rem;
+  font-weight:600;cursor:pointer;border:none;transition:var(--transition);
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary{background:var(--brand-deep);color:#fff}
+.btn-primary:hover{background:#24477a}
+.btn-secondary{background:var(--bg-section);color:var(--text-secondary);border:1px solid var(--border)}
+.btn-secondary:hover{background:#edf1f7}
+
+/* ── Step Content ── */
+.step-content{display:none;animation:fadeIn .35s ease}
+.step-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.step-title{font-size:1.6rem;font-weight:800;margin-bottom:8px;color:var(--brand-deep)}
+.step-subtitle{font-size:.92rem;color:var(--text-secondary);margin-bottom:32px;line-height:1.7}
+
+/* ── Cards ── */
+.card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:24px;margin-bottom:16px;
+  transition:var(--transition);
+}
+.card:hover{box-shadow:var(--shadow-sm)}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.card-icon{
+  width:44px;height:44px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;background:var(--bg-section);
+}
+.card-title{font-size:1.05rem;font-weight:700}
+.card-desc{font-size:.82rem;color:var(--text-secondary);margin-top:2px}
+
+/* ── Work Type Selector ── */
+.work-types{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.work-type-card{
+  border:2px solid var(--border);border-radius:var(--radius-md);
+  padding:24px 20px;cursor:pointer;transition:var(--transition);
+  background:var(--bg-card);text-align:center;
+}
+.work-type-card:hover{border-color:var(--brand-light);box-shadow:var(--shadow-sm)}
+.work-type-card.selected{border-color:var(--brand-blue);background:#f0f6ff;box-shadow:0 0 0 3px rgba(74,144,217,.12)}
+.work-type-icon{font-size:1.8rem;margin-bottom:10px}
+.work-type-name{font-size:1rem;font-weight:700;margin-bottom:4px}
+.work-type-desc{font-size:.8rem;color:var(--text-secondary);line-height:1.5}
+
+/* ── Trade Category ── */
+.trade-section{margin-bottom:24px}
+.trade-header{
+  display:flex;align-items:center;gap:14px;padding:20px 24px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-md);cursor:pointer;transition:var(--transition);
+}
+.trade-header:hover{box-shadow:var(--shadow-sm)}
+.trade-header.expanded{border-radius:var(--radius-md) var(--radius-md) 0 0;border-bottom-color:transparent}
+.trade-icon{font-size:1.4rem;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--bg-section);border-radius:var(--radius-sm);flex-shrink:0}
+.trade-name{font-size:1.05rem;font-weight:700;flex:1}
+.trade-status{font-size:.82rem;color:var(--text-muted)}
+.trade-status.has-selection{color:var(--severity-low);font-weight:600}
+.trade-toggle{font-size:.8rem;color:var(--text-muted);transition:transform .25s}
+.trade-header.expanded .trade-toggle{transform:rotate(180deg)}
+.trade-body{
+  display:none;background:var(--bg-card);
+  border:1px solid var(--border);border-top:none;
+  border-radius:0 0 var(--radius-md) var(--radius-md);
+  padding:0 24px 24px;
+}
+.trade-body.show{display:block;animation:fadeIn .25s ease}
+
+/* ── Why-It-Matters Panel ── */
+.why-panel{
+  background:linear-gradient(135deg,#f0f6ff,#f8fbff);
+  border:1px solid #d6e4f5;border-radius:var(--radius-sm);
+  padding:16px 20px;margin-bottom:20px;margin-top:16px;
+}
+.why-panel-title{font-size:.78rem;font-weight:700;color:var(--brand-blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.why-panel p{font-size:.84rem;color:var(--text-secondary);line-height:1.65}
+
+/* ── Scope Options ── */
+.scope-group{margin-bottom:20px}
+.scope-group-title{font-size:.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.scope-options{display:flex;flex-direction:column;gap:8px}
+.scope-option{
+  display:flex;align-items:flex-start;gap:14px;padding:14px 16px;
+  border:2px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;transition:var(--transition);
+}
+.scope-option:hover{border-color:var(--brand-light);background:#fafcff}
+.scope-option.selected{border-color:var(--brand-blue);background:#f0f6ff}
+.scope-radio{
+  width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
+  flex-shrink:0;margin-top:2px;transition:var(--transition);
+  display:flex;align-items:center;justify-content:center;
+}
+.scope-option.selected .scope-radio{border-color:var(--brand-blue)}
+.scope-option.selected .scope-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--brand-blue)}
+.scope-option-name{font-size:.9rem;font-weight:600}
+.scope-option-desc{font-size:.8rem;color:var(--text-secondary);margin-top:2px;line-height:1.5}
+
+/* ── Checkbox Options ── */
+.option-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.option-check{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;transition:var(--transition);font-size:.84rem;
+}
+.option-check:hover{border-color:var(--brand-light)}
+.option-check.checked{border-color:var(--brand-blue);background:#f0f6ff}
+.option-checkbox{
+  width:18px;height:18px;border-radius:4px;border:2px solid var(--border);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:var(--transition);font-size:.7rem;color:#fff;
+}
+.option-check.checked .option-checkbox{border-color:var(--brand-blue);background:var(--brand-blue)}
+.option-check.checked .option-checkbox::after{content:'✓'}
+
+/* ── Standards Panel ── */
+.standards-panel{
+  margin-top:20px;padding:14px 18px;
+  background:#fafbfc;border:1px solid var(--border);border-radius:var(--radius-sm);
+}
+.standards-toggle{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:.8rem;font-weight:600;color:var(--text-muted);
+}
+.standards-toggle .arrow{transition:transform .2s}
+.standards-toggle.open .arrow{transform:rotate(90deg)}
+.standards-list{display:none;margin-top:10px;padding-left:4px}
+.standards-list.show{display:block}
+.standards-list li{font-size:.78rem;color:var(--text-secondary);line-height:1.6;margin-bottom:4px;list-style:none;padding-left:14px;position:relative}
+.standards-list li::before{content:'·';position:absolute;left:0;color:var(--brand-blue);font-weight:bold}
+
+/* ── Design Type Selection ── */
+.design-types{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.design-card{
+  border:2px solid var(--border);border-radius:var(--radius-md);
+  overflow:hidden;cursor:pointer;transition:var(--transition);
+  background:var(--bg-card);
+}
+.design-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.design-card.selected{border-color:var(--brand-blue);box-shadow:0 0 0 3px rgba(74,144,217,.15)}
+.design-preview{height:160px;position:relative;overflow:hidden}
+.design-swatches{display:flex;height:100%}
+.design-swatches div{flex:1}
+.design-card-body{padding:20px}
+.design-card-name{font-size:1.05rem;font-weight:700;margin-bottom:4px}
+.design-card-desc{font-size:.82rem;color:var(--text-secondary);line-height:1.5}
+.design-badge{
+  position:absolute;top:12px;right:12px;
+  padding:4px 10px;border-radius:var(--radius-full);
+  font-size:.7rem;font-weight:700;color:#fff;
+  background:var(--brand-blue);opacity:0;transition:var(--transition);
+}
+.design-card.selected .design-badge{opacity:1}
+
+/* ── Finish Items ── */
+.finish-category{margin-bottom:28px}
+.finish-category-title{font-size:.95rem;font-weight:700;margin-bottom:12px;padding-left:4px}
+.finish-item{
+  display:flex;align-items:center;gap:16px;padding:14px 16px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  margin-bottom:8px;background:var(--bg-card);transition:var(--transition);
+}
+.finish-item:hover{box-shadow:var(--shadow-sm)}
+.finish-item-name{font-weight:600;font-size:.88rem;min-width:100px}
+.finish-item-options{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.finish-option{
+  padding:6px 14px;border:1.5px solid var(--border);border-radius:var(--radius-full);
+  font-size:.8rem;cursor:pointer;transition:var(--transition);white-space:nowrap;
+}
+.finish-option:hover{border-color:var(--brand-light)}
+.finish-option.selected{border-color:var(--brand-blue);background:var(--brand-blue);color:#fff}
+
+/* ── Result Summary ── */
+.result-header{
+  background:var(--brand-deep);color:#fff;
+  border-radius:var(--radius-lg);padding:32px;margin-bottom:24px;
+  text-align:center;
+}
+.result-total-label{font-size:.88rem;opacity:.7;margin-bottom:8px}
+.result-total{font-size:2.4rem;font-weight:800;letter-spacing:-.02em}
+.result-total small{font-size:1rem;font-weight:400;opacity:.6}
+.result-range{font-size:.88rem;opacity:.6;margin-top:4px}
+
+.result-section-title{
+  font-size:.82rem;font-weight:700;color:var(--text-secondary);
+  padding:12px 20px;background:var(--bg-section);
+  border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+  margin-top:16px;text-transform:uppercase;letter-spacing:.04em;
+}
+.result-breakdown{margin-top:0}
+.result-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);
+}
+.result-row:last-child{border-bottom:none}
+.result-row-label{display:flex;align-items:center;gap:10px;font-size:.9rem}
+.result-row-label .icon{font-size:1.1rem}
+.result-row-amount{font-weight:700;font-size:.95rem;color:var(--brand-deep)}
+.result-row-detail{font-size:.78rem;color:var(--text-muted);margin-top:2px}
+
+/* ── Form Inputs ── */
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+.form-input,.form-select{
+  width:100%;padding:10px 14px;border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);font-size:.9rem;
+  font-family:inherit;transition:var(--transition);
+  background:var(--bg-card);
+}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--brand-blue);box-shadow:0 0 0 3px rgba(74,144,217,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ── Mobile ── */
+.mobile-header{display:none;position:fixed;top:0;left:0;right:0;z-index:110;background:var(--brand-deep);padding:12px 16px;color:#fff}
+.mobile-header .menu-btn{background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.show{display:block}
+  .mobile-header{display:flex;align-items:center;justify-content:space-between}
+  .main{margin-left:0;padding:72px 16px 100px}
+  .bottom-bar{left:0;padding:12px 16px}
+  .design-types{grid-template-columns:1fr}
+  .work-types{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+}
+
+/* ── Print ── */
+@media print{
+  .sidebar,.bottom-bar,.mobile-header,.nav-buttons{display:none!important}
+  .main{margin-left:0;padding:20px;max-width:100%}
+  .step-content{display:none!important}
+  .step-content[data-step="result"]{display:block!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <span style="font-weight:700;font-size:.9rem">더보다 인테리어</span>
+  <span style="font-size:.78rem;opacity:.6">범위 설정</span>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="logo">더보다</div>
+    <div class="logo-sub">인테리어 범위 설정 · 견적 상담</div>
+    <ul class="step-list" id="stepList"></ul>
+    <div class="sidebar-footer">
+      <div>더보다 AI 상담 시스템</div>
+      <div style="margin-top:4px">© 2026 Theboda</div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main" id="mainContent">
+
+    <!-- ═══ STEP: 기본 정보 ═══ -->
+    <section class="step-content active" data-step="info">
+      <div class="step-title">기본 정보</div>
+      <div class="step-subtitle">
+        정확한 범위 산정을 위해 기본 정보를 입력합니다.
+      </div>
+
+      <!-- 공사 유형 -->
+      <div style="margin-bottom:28px">
+        <div class="form-label" style="margin-bottom:12px;font-size:.95rem">공사 유형을 선택하세요</div>
+        <div class="work-types">
+          <div class="work-type-card" onclick="selectWorkType('repair')">
+            <div class="work-type-icon">🔧</div>
+            <div class="work-type-name">수리</div>
+            <div class="work-type-desc">설비 점검 결과에 따라<br>필요한 항목만 수리</div>
+          </div>
+          <div class="work-type-card" onclick="selectWorkType('partial')">
+            <div class="work-type-icon">🏠</div>
+            <div class="work-type-name">부분 인테리어</div>
+            <div class="work-type-desc">설비 수리 +<br>선택적 마감 교체</div>
+          </div>
+          <div class="work-type-card" onclick="selectWorkType('full')">
+            <div class="work-type-icon">✨</div>
+            <div class="work-type-name">전체 리모델링</div>
+            <div class="work-type-desc">설비 전반 +<br>인테리어 전체 시공</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">단지명</label>
+            <input class="form-input" id="infoComplex" placeholder="예: 영통포레파크원">
+          </div>
+          <div class="form-group">
+            <label class="form-label">동 · 호수</label>
+            <input class="form-input" id="infoUnit" placeholder="예: 130동 1406호">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">전용면적 (평형)</label>
+            <select class="form-select" id="infoSize">
+              <option value="">선택하세요</option>
+              <option value="18">18평형 (59㎡)</option>
+              <option value="24">24평형 (79㎡)</option>
+              <option value="32">32평형 (105㎡)</option>
+              <option value="34">34평형 (112㎡)</option>
+              <option value="42">42~45평형 (139~149㎡)</option>
+              <option value="50">50평형 이상</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">층수</label>
+            <select class="form-select" id="infoFloor">
+              <option value="">선택하세요</option>
+              <option value="low">저층 (1~5층)</option>
+              <option value="mid">중층 (6~15층)</option>
+              <option value="high">고층 (16층 이상)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">욕실 수</label>
+            <select class="form-select" id="infoBathrooms">
+              <option value="1">1개</option>
+              <option value="2" selected>2개</option>
+              <option value="3">3개</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">발코니 확장 여부</label>
+            <select class="form-select" id="infoBalcony">
+              <option value="">선택하세요</option>
+              <option value="none">확장 없음 (원형 유지)</option>
+              <option value="partial">일부 확장</option>
+              <option value="full">전체 확장</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">고객명</label>
+          <input class="form-input" id="infoClient" placeholder="선택 사항" style="max-width:300px">
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP: 기능 · 설비 범위 ═══ -->
+    <section class="step-content" data-step="trades">
+      <div class="step-title">기능 · 설비 범위</div>
+      <div class="step-subtitle">
+        인테리어의 눈에 보이지 않는 핵심입니다.<br>
+        각 공종별로 <strong>현재 상태에 맞는 공사 범위</strong>를 선택하세요. 왜 이 항목이 중요한지 함께 안내드립니다.
+      </div>
+      <div id="tradeContainer"></div>
+    </section>
+
+    <!-- ═══ STEP: 인테리어 타입 ═══ -->
+    <section class="step-content" data-step="design">
+      <div class="step-title">인테리어 타입 선택</div>
+      <div class="step-subtitle">
+        기능·설비 범위가 정해졌으니, 이제 공간의 분위기를 결정합니다.<br>
+        선택하신 타입에 따라 마감재 구성이 달라집니다.
+      </div>
+      <div class="design-types" id="designTypes"></div>
+      <div style="margin-top:24px">
+        <div class="card" id="designDetailCard" style="display:none">
+          <div class="card-header">
+            <div class="card-icon">🎨</div>
+            <div>
+              <div class="card-title" id="designDetailTitle">타입 상세</div>
+              <div class="card-desc" id="designDetailDesc"></div>
+            </div>
+          </div>
+          <div id="designDetailContent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP: 마감재 선택 ═══ -->
+    <section class="step-content" data-step="finish">
+      <div class="step-title">마감재 개별 선택</div>
+      <div class="step-subtitle">
+        선택하신 <strong id="selectedTypeName">-</strong> 타입 기준으로 추천 마감재가 설정되어 있습니다.<br>
+        각 항목별로 등급을 변경하실 수 있습니다.
+      </div>
+      <div id="finishContainer"></div>
+    </section>
+
+    <!-- ═══ STEP: 견적 결과 ═══ -->
+    <section class="step-content" data-step="result">
+      <div class="step-title">견적 결과</div>
+      <div class="step-subtitle">선택하신 범위와 마감재를 기반으로 산출된 예상 견적입니다.</div>
+      <div id="resultContainer"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Bottom Nav Bar -->
+<div class="bottom-bar" id="bottomBar">
+  <div class="bar-info" id="barInfo">공사 유형을 선택하세요</div>
+  <div class="nav-buttons">
+    <button class="btn btn-secondary" id="btnPrev" onclick="prevStep()" style="display:none">← 이전</button>
+    <button class="btn btn-primary" id="btnNext" onclick="nextStep()">다음 단계 →</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATA MODEL
+// ══════════════════════════════════════════════════════
+
+const TRADES = [
+  {
+    id:'electrical', name:'전기공사', icon:'⚡',
+    why:'전기 설비는 안전과 직결됩니다. 노후 배선은 합선·화재의 원인이 되며, 현대 가전(인덕션, 건조기 등)은 기존 배선 용량을 초과하는 경우가 많습니다. 겉으로 보이지 않지만, 가장 먼저 점검해야 할 항목입니다.',
+    scopes:[
+      {id:'none', name:'교체 없음', desc:'기존 설비 유지', price:0},
+      {id:'basic', name:'마감 중심 교체', desc:'콘센트, 스위치, 조명 교체 · 내부 배선은 유지', price:150},
+      {id:'partial', name:'부분 신설 및 보강', desc:'신규 회로 일부 신설 · 문제 구간 배선 교체', price:350},
+      {id:'full', name:'전면 교체', desc:'전체 재정비 및 교체 · 배선, 기구류 전반 재구성', price:600},
+    ],
+    options:[
+      {id:'panel', name:'분전함 교체', price:40},
+      {id:'breaker', name:'차단기 교체', price:20},
+      {id:'relocate', name:'위치 추가 및 변경 (콘센트, 회로, 조명)', price:50},
+      {id:'panel_move', name:'분전함 이동', price:35},
+    ],
+    standards:[
+      '세대 신규·교체 옥내배선은 연동선 2.5㎟ 이상 적용',
+      '인덕션, 오븐, 건조기, 에어컨 등은 전용 회로 검토 필수',
+      '욕실 등 물 사용 공간 콘센트는 누전차단기, 접지, 방적형 콘센트 기준 확인',
+      '전선 접속부는 임시 결선, 임의 연장, 난잡 접속 방식 금지',
+    ]
+  },
+  {
+    id:'heating', name:'난방공사', icon:'🔥',
+    why:'난방 배관은 바닥 아래 매립되어 있어 인테리어 완공 후에는 수리가 사실상 불가능합니다. 20년 이상 된 배관은 내부 스케일 축적과 미세 누수 위험이 있으며, 이는 입주 후 치명적인 하자로 이어집니다.',
+    scopes:[
+      {id:'none', name:'미교체 진행', desc:'기존 배관 유지', price:0},
+      {id:'repair', name:'누수 부분 수리', desc:'문제 구간 보수', price:100},
+      {id:'extend', name:'난방 확장 공사', desc:'기존 회로 연장 (발코니 확장 등)', price:250},
+      {id:'full', name:'전면 교체', desc:'전체 배관 재시공', price:500},
+    ],
+    options:[
+      {id:'flush', name:'배관 세척', price:15},
+      {id:'thermostat', name:'온도조절기 교체', price:20},
+      {id:'distributor', name:'분배기 교체', price:90},
+      {id:'dist_pipe', name:'분배기 연결관 교체', price:40},
+      {id:'boiler', name:'보일러 교체', price:150},
+      {id:'iot', name:'IoT 연동', price:30},
+    ],
+    subScopes:{
+      label:'난방 배관 공사 방법 (전면 교체 선택 시)',
+      requires:'full',
+      items:[
+        {id:'demolish', name:'철거 재시공', desc:'기존 배관 철거 후 재시공', price:0},
+        {id:'groove', name:'홈파기 시공', desc:'바닥 홈을 파서 배관 매입', price:50},
+        {id:'dry_panel', name:'덧방시공 (건식 패널)', desc:'바닥 높이 약간 상승', price:30},
+      ]
+    },
+    standards:[
+      '온수온돌은 바탕층·단열층·채움층·배관층·마감층의 기본 구조 전제 시공',
+      '온수배관은 지름 15mm 이상, 배관 간격 150~300mm 기준',
+      '마감층은 수평 기준 시공, 균열 방지를 위해 충분한 양생·건조 후 마감',
+      '확장 난방 시 점검 및 보수가 가능하도록 점검구 시공',
+    ]
+  },
+  {
+    id:'plumbing', name:'배관공사', icon:'🔧',
+    why:'급수·배수 배관은 건물의 혈관과 같습니다. 노후 배관은 녹물, 수압 저하, 역류 문제를 일으키며, 배수 트랩 불량은 악취의 직접적 원인입니다. 벽·바닥 안에 있어 나중에 교체하면 마감재까지 다시 해야 합니다.',
+    scopes:[
+      {id:'none', name:'미교체 진행', desc:'기존 배관 유지', price:0},
+      {id:'partial', name:'부분 수리 및 교체', desc:'문제 구간 보수 · 위치 소폭 이동', price:120},
+      {id:'full', name:'전면 교체', desc:'세대 전체 급수·배수관 교체', price:350},
+    ],
+    options:[
+      {id:'soundproof', name:'배수관 방음', price:30},
+      {id:'insulation', name:'배관 보온재 교체', price:20},
+      {id:'valve', name:'밸브류 교체', price:15},
+      {id:'double', name:'냉온수 이중 배관', price:80},
+      {id:'distributor', name:'냉온수 분배기 신설', price:60},
+    ],
+    standards:[
+      '배관 이동·연장 시 누수 위험 없고 점검·보수 가능한 방식 시공',
+      '배수 경사와 용량을 맞춰 역류·정체 없도록 시공',
+      '하부 트랩 및 배수 연결부 봉수 유지, 악취 차단',
+      '우수관과 오수관은 혼용하지 않고 구분하여 시공',
+    ]
+  },
+  {
+    id:'bathroom', name:'욕실공사', icon:'🚿',
+    why:'욕실은 방수가 핵심입니다. 방수 불량은 아래층 누수, 곰팡이, 구조체 손상으로 이어집니다. 도기·타일만 교체하는 "부분 시공"은 방수층을 건드리지 않으므로 근본 문제가 남을 수 있습니다.',
+    scopes:[
+      {id:'none', name:'미교체 진행', desc:'기존 욕실 유지', price:0},
+      {id:'fixture', name:'도기 및 위생기 교체', desc:'변기, 세면기, 수전 등 교체', price:150},
+      {id:'tile_over', name:'타일 덧방시공', desc:'기존 타일 위에 시공 (방수층 유지)', price:200},
+      {id:'full', name:'전면 교체', desc:'전체 철거 후 방수·타일·도기 재시공', price:500},
+      {id:'structural', name:'구조 변경 공사', desc:'벽체 이동, 공간 재배치 포함', price:700},
+    ],
+    options:[
+      {id:'plaster', name:'방수 전 전체 미장', price:40},
+      {id:'floor_heat', name:'바닥 난방 시공', price:30},
+      {id:'insulation', name:'욕실 단열 시공', price:25},
+      {id:'vent2', name:'환기 2개 설치', price:15},
+      {id:'vent_complex', name:'복합 환기 설비', price:45},
+    ],
+    standards:[
+      '바닥 및 높이 1m까지의 안쪽 벽면 방수 처리 후 내수재료 마감',
+      '코너, 배관 관통부, 배수구 주변 등 취약부 보강재 시공 후 방수',
+      '방수 공정은 제조사 기준 건조시간 준수',
+      '방수 공정 생략, 건조시간 임의 단축, 취약부 보강 생략 금지',
+    ]
+  },
+  {
+    id:'insulation', name:'내단열 공사', icon:'🧱',
+    why:'단열은 겨울 결로와 곰팡이의 근본적 해결책입니다. 특히 구축 아파트의 외벽면은 단열이 부족하여 벽면 온도가 낮아지고, 이것이 결로→곰팡이→건강 문제로 이어집니다. 단열 없이 도배만 하면 같은 문제가 반복됩니다.',
+    scopes:[
+      {id:'none', name:'미시공 진행', desc:'기존 상태 유지', price:0},
+      {id:'spot', name:'취약부 보강', desc:'결로 발생 부위 집중 시공', price:100},
+      {id:'extension', name:'확장부 시공', desc:'발코니 확장 구간 단열', price:200},
+      {id:'wall', name:'외벽면 시공', desc:'외기에 면한 벽체 전체 단열', price:350},
+    ],
+    options:[
+      {id:'floor_connect', name:'바닥 단열 연결', price:40},
+      {id:'moisture', name:'방습층 시공', price:20},
+      {id:'bridge', name:'열교 보강 시공', price:30},
+    ],
+    subScopes:{
+      label:'단열 방법 선택',
+      requires:'spot,extension,wall',
+      items:[
+        {id:'space', name:'공간 우선형', desc:'PF보드 80~100T · 공간 손실 최소화 · 체감 개선 중심', price:0},
+        {id:'balance', name:'균형형', desc:'XPS 120~150T · 공간과 성능의 균형 · 체감 성능 개선', price:30},
+        {id:'performance', name:'성능 우선형', desc:'PF보드 190T~ · 법정 기준 충족 · 결로·열교 저감 우선', price:80},
+      ]
+    },
+    standards:[
+      '내단열은 바닥 단열재와의 연속성 확보 여부 먼저 검토 후 시공',
+      '바닥 단열 연결이 어려운 경우 성능 한계와 결로 재발 가능성 사전 설명',
+      '외벽 모서리, 창호 측면, 슬라브 접합부 등 열교 취약부 별도 보강',
+      '단열재가 끊기거나 빈 공간이 남는 방식으로 시공 금지',
+    ]
+  },
+  {
+    id:'window', name:'창호(샷시) 공사', icon:'🪟',
+    why:'창호는 단열·방음·기밀의 핵심입니다. 아무리 벽체 단열을 해도 창호가 노후하면 열 손실의 70% 이상이 창을 통해 발생합니다. 이중창·로이유리 교체만으로도 난방비 절감 체감이 큽니다.',
+    scopes:[
+      {id:'none', name:'미교체 진행', desc:'기존 창호 유지', price:0},
+      {id:'outer_single', name:'외창 단창 교체', desc:'140mm 프레임', price:500},
+      {id:'outer_double', name:'외창 이중창 교체', desc:'250mm 프레임', price:800},
+      {id:'full', name:'전면 교체', desc:'내창+외창 전체 교체', price:1400},
+    ],
+    options:[
+      {id:'inner_single', name:'내창 단창 교체', price:200},
+      {id:'inner_double', name:'내창 이중창 교체', price:350},
+      {id:'screen', name:'방충망 교체', price:30},
+      {id:'repair', name:'부분 보수 (하드웨어·실리콘)', price:20},
+      {id:'plaster', name:'철거 후 미장 보수', price:40},
+      {id:'drip', name:'물끊기 시공', price:15},
+      {id:'auto_lock', name:'자동 잠금 장치', price:10},
+      {id:'safety_screen', name:'안전 방충망', price:25},
+    ],
+    standards:[
+      '외창 기본: 복층유리 26mm 3면 Low-E, KS F 2292 기밀성능',
+      '창호 고정 브라켓 수평방향 1.5~1.8m 이내 기준 준수',
+      '창호·벽체 사이 틈새 수성 연질폼 밀실 충전',
+      '외부 실리콘은 외부용 우레탄 실리콘 필수',
+    ]
+  },
+  {
+    id:'misc', name:'기타 공사', icon:'🏗️',
+    why:'발코니 방수·단차 조정, 공조 설비, 스마트홈 등은 생활 편의와 장기적 유지보수에 영향을 주는 항목들입니다. 필요에 따라 선택할 수 있습니다.',
+    scopes:[
+      {id:'none', name:'추가 공사 없음', desc:'기본 공사만 진행', price:0},
+    ],
+    options:[
+      {id:'balcony_waterproof', name:'발코니 바닥 방수', price:40},
+      {id:'balcony_level', name:'바닥 단차 조정', price:50},
+      {id:'ac_room', name:'실외기실 제작', price:60},
+      {id:'ac_sound', name:'실외기실 방음', price:30},
+      {id:'system_ac', name:'시스템 에어컨', price:550},
+      {id:'hrv', name:'전열교환기', price:200},
+      {id:'iot_switch', name:'IoT 스위치', price:40},
+      {id:'auto_curtain', name:'전동 커튼(블라인드)', price:80},
+      {id:'floor_level', name:'바닥 수평 공사', price:60},
+      {id:'ceiling', name:'천정 공사', price:80},
+    ],
+    standards:[
+      '발코니 방수는 배수 경사 확보 후 시공',
+      '시스템 에어컨은 전용 회로 및 배관 경로 사전 검토',
+    ]
+  }
+];
+
+const DESIGN_TYPES = [
+  {
+    id:'clean_white', name:'클린 화이트',
+    desc:'깔끔하고 밝은 공간. 화이트 톤의 벽지와 밝은 바닥재로 공간을 넓고 청결하게 연출합니다.',
+    colors:['#ffffff','#f5f5f0','#e8e4de','#d4cfc7','#c2bdb5'],
+    details:{
+      도배:'화이트 실크벽지 (LX, DID 등)',
+      바닥:'밝은 톤 강마루 / 화이트 오크',
+      타일:'화이트 포세린 600×600',
+      도어:'화이트 ABS 도어',
+      가구:'화이트 PET 싱크 · 수납장',
+      조명:'화이트 다운라이트 · 간접조명',
+    }
+  },
+  {
+    id:'natural_wood', name:'내추럴 우드',
+    desc:'따뜻하고 자연스러운 공간. 원목 느낌의 바닥과 우드 포인트로 편안한 분위기를 만듭니다.',
+    colors:['#f5f0e8','#e0d5c1','#c4a882','#a08060','#7a6040'],
+    details:{
+      도배:'우드톤 포인트 + 아이보리 벽지',
+      바닥:'원목/우드톤 강마루 · 내추럴 오크',
+      타일:'베이지·우드룩 포세린',
+      도어:'우드 래핑 도어',
+      가구:'원목+화이트 투톤 싱크 · 수납장',
+      조명:'전구색 다운라이트 · 포인트 펜던트',
+    }
+  },
+  {
+    id:'modern_grey', name:'모던 그레이',
+    desc:'세련되고 모던한 공간. 그레이 톤의 절제된 컬러와 무광 마감으로 도시적 감각을 표현합니다.',
+    colors:['#f0f0f0','#d0d0d0','#a0a0a0','#707070','#404040'],
+    details:{
+      도배:'그레이톤 벽지 · 포인트 다크그레이',
+      바닥:'그레이 강마루 · 콘크리트 톤',
+      타일:'그레이·다크 포세린',
+      도어:'그레이 ABS / 무광 도어',
+      가구:'그레이+무광 블랙 싱크 · 수납장',
+      조명:'주백색 다운라이트 · 라인조명',
+    }
+  }
+];
+
+const FINISH_CATEGORIES = [
+  {
+    name:'벽면 마감',
+    items:[
+      {id:'wallpaper', name:'도배', options:[
+        {id:'basic', name:'일반 실크', price:150},
+        {id:'mid', name:'중급 실크', price:250},
+        {id:'premium', name:'프리미엄', price:400},
+      ]},
+      {id:'film', name:'인테리어 필름', options:[
+        {id:'none', name:'미시공', price:0},
+        {id:'partial', name:'부분 (현관문·문선)', price:60},
+        {id:'full', name:'전체', price:120},
+      ]},
+      {id:'paint', name:'도장 (탄성코팅)', options:[
+        {id:'none', name:'미시공', price:0},
+        {id:'partial', name:'발코니·일부', price:30},
+        {id:'full', name:'전체', price:80},
+      ]},
+    ]
+  },
+  {
+    name:'바닥 마감',
+    items:[
+      {id:'flooring', name:'바닥재', options:[
+        {id:'sheet', name:'장판', price:100},
+        {id:'laminate', name:'강마루 (일반)', price:250},
+        {id:'premium_laminate', name:'강마루 (프리미엄)', price:450},
+        {id:'wood', name:'원목마루', price:700},
+      ]},
+    ]
+  },
+  {
+    name:'주방',
+    items:[
+      {id:'sink', name:'싱크대', options:[
+        {id:'basic', name:'일반 PET', price:300},
+        {id:'mid', name:'중급 (인조대리석)', price:500},
+        {id:'premium', name:'프리미엄 (사제)', price:800},
+      ]},
+      {id:'hood', name:'주방 후드', options:[
+        {id:'basic', name:'매입형', price:15},
+        {id:'chimney', name:'침니형', price:30},
+        {id:'hi_hood', name:'하이후드', price:20},
+      ]},
+    ]
+  },
+  {
+    name:'도어 · 가구',
+    items:[
+      {id:'door', name:'방문', options:[
+        {id:'basic', name:'ABS 민자', price:120},
+        {id:'design', name:'디자인 도어', price:200},
+        {id:'sliding', name:'슬라이딩', price:300},
+      ]},
+      {id:'entrance', name:'중문', options:[
+        {id:'none', name:'미설치', price:0},
+        {id:'3fold', name:'3연동', price:85},
+        {id:'sliding', name:'원슬라이딩', price:120},
+        {id:'steel', name:'여닫이 철재', price:140},
+      ]},
+      {id:'closet', name:'붙박이장', options:[
+        {id:'none', name:'미설치', price:0},
+        {id:'basic', name:'일반', price:200},
+        {id:'premium', name:'프리미엄', price:400},
+      ]},
+      {id:'shoes', name:'신발장', options:[
+        {id:'basic', name:'일반', price:80},
+        {id:'floating', name:'띄움 시공', price:150},
+        {id:'premium', name:'프리미엄', price:200},
+      ]},
+    ]
+  },
+  {
+    name:'욕실 마감',
+    items:[
+      {id:'toilet', name:'양변기', options:[
+        {id:'basic', name:'일반', price:50},
+        {id:'mid', name:'중급 (치마형)', price:80},
+        {id:'premium', name:'프리미엄', price:120},
+      ]},
+      {id:'basin', name:'세면기', options:[
+        {id:'basic', name:'일반', price:40},
+        {id:'pedestal', name:'반다리', price:60},
+        {id:'premium', name:'프리미엄', price:90},
+      ]},
+      {id:'bath_faucet', name:'수전', options:[
+        {id:'basic', name:'일반', price:60},
+        {id:'mid', name:'중급', price:100},
+        {id:'premium', name:'프리미엄 (레인샤워)', price:180},
+      ]},
+      {id:'bath_tile', name:'욕실 타일', options:[
+        {id:'basic', name:'도기질 300×600', price:100},
+        {id:'mid', name:'포세린 600×600', price:180},
+        {id:'premium', name:'대형 포세린', price:280},
+      ]},
+      {id:'bath_cabinet', name:'욕실장', options:[
+        {id:'basic', name:'일반', price:40},
+        {id:'premium', name:'조명형', price:70},
+      ]},
+    ]
+  },
+  {
+    name:'현관 · 기타 타일',
+    items:[
+      {id:'entry_tile', name:'현관 타일', options:[
+        {id:'basic', name:'자기질 300×300', price:20},
+        {id:'mid', name:'포세린 600×600', price:40},
+        {id:'premium', name:'대형 포세린', price:70},
+      ]},
+      {id:'kitchen_tile', name:'주방 벽 타일', options:[
+        {id:'basic', name:'도기질 300×600', price:30},
+        {id:'mid', name:'포세린 600×600', price:50},
+        {id:'premium', name:'대형 포세린', price:80},
+      ]},
+    ]
+  },
+];
+
+
+// ══════════════════════════════════════════════════════
+// STEP DEFINITIONS (dynamic based on work type)
+// ══════════════════════════════════════════════════════
+
+const ALL_STEPS = [
+  { id:'info',   label:'기본 정보',      num:'1', always:true },
+  { id:'trades', label:'기능 · 설비 범위', num:'2', always:true },
+  { id:'design', label:'인테리어 타입',    num:'3', modes:['partial','full'] },
+  { id:'finish', label:'마감재 선택',     num:'4', modes:['partial','full'] },
+  { id:'result', label:'견적 결과',       num:'5', always:true },
+];
+
+function getVisibleSteps() {
+  const mode = state.workType;
+  return ALL_STEPS.filter(s => s.always || (s.modes && s.modes.includes(mode)));
+}
+
+
+// ══════════════════════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════════════════════
+
+const state = {
+  currentStepId: 'info',
+  workType: null,       // 'repair' | 'partial' | 'full'
+  tradeSelections: {},
+  designType: null,
+  finishSelections: {},
+};
+
+TRADES.forEach(t => {
+  state.tradeSelections[t.id] = { scope:'none', options:[], subScope:null };
+});
+
+
+// ══════════════════════════════════════════════════════
+// SIDEBAR RENDERING
+// ══════════════════════════════════════════════════════
+
+function renderSidebar() {
+  const steps = getVisibleSteps();
+  const list = document.getElementById('stepList');
+  list.innerHTML = steps.map((s, i) => {
+    const isActive = s.id === state.currentStepId;
+    const currentIdx = steps.findIndex(x => x.id === state.currentStepId);
+    const isDone = i < currentIdx;
+    return `<li class="step-item ${isActive?'active':''} ${isDone?'done':''}" data-step="${s.id}" onclick="goToStep('${s.id}')">
+      <span class="step-num">${isDone ? '' : (i+1)}</span>${s.label}
+    </li>`;
+  }).join('');
+}
+
+
+// ══════════════════════════════════════════════════════
+// WORK TYPE SELECTION
+// ══════════════════════════════════════════════════════
+
+function selectWorkType(type) {
+  state.workType = type;
+  document.querySelectorAll('.work-type-card').forEach(el => {
+    el.classList.toggle('selected', el.getAttribute('onclick').includes(type));
+  });
+  renderSidebar();
+  updateBarInfo();
+}
+
+
+// ══════════════════════════════════════════════════════
+// STEP NAVIGATION
+// ══════════════════════════════════════════════════════
+
+function goToStep(id) {
+  const steps = getVisibleSteps();
+  const idx = steps.findIndex(s => s.id === id);
+  if (idx < 0) return;
+
+  state.currentStepId = id;
+
+  // Show/hide content
+  document.querySelectorAll('.step-content').forEach(el => {
+    el.classList.toggle('active', el.dataset.step === id);
+  });
+
+  // Buttons
+  document.getElementById('btnPrev').style.display = idx === 0 ? 'none' : '';
+  const btnNext = document.getElementById('btnNext');
+  if (id === 'result') {
+    btnNext.textContent = '인쇄 / PDF 저장';
+    btnNext.onclick = () => window.print();
+  } else {
+    btnNext.textContent = '다음 단계 →';
+    btnNext.onclick = nextStep;
+  }
+
+  // Rebuild dynamic content
+  if (id === 'design') renderDesignTypes();
+  if (id === 'finish') renderFinishItems();
+  if (id === 'result') renderResult();
+
+  renderSidebar();
+  updateBarInfo();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function nextStep() {
+  const steps = getVisibleSteps();
+  const idx = steps.findIndex(s => s.id === state.currentStepId);
+
+  // Validate work type on first step
+  if (state.currentStepId === 'info' && !state.workType) {
+    document.querySelector('.work-types').style.outline = '2px solid var(--severity-high)';
+    setTimeout(() => document.querySelector('.work-types').style.outline = '', 1500);
+    return;
+  }
+
+  if (idx < steps.length - 1) goToStep(steps[idx + 1].id);
+}
+
+function prevStep() {
+  const steps = getVisibleSteps();
+  const idx = steps.findIndex(s => s.id === state.currentStepId);
+  if (idx > 0) goToStep(steps[idx - 1].id);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
+
+// ══════════════════════════════════════════════════════
+// BAR INFO (no pricing mid-flow)
+// ══════════════════════════════════════════════════════
+
+function updateBarInfo() {
+  const el = document.getElementById('barInfo');
+  const steps = getVisibleSteps();
+  const idx = steps.findIndex(s => s.id === state.currentStepId);
+  const total = steps.length;
+
+  const labels = {
+    info: '공사 유형과 기본 정보를 입력하세요',
+    trades: '각 공종별로 필요한 공사 범위를 선택하세요',
+    design: '원하시는 인테리어 분위기를 선택하세요',
+    finish: '마감재 등급을 선택하세요',
+    result: '선택 완료 — 예상 견적이 산출되었습니다',
+  };
+
+  el.innerHTML = `<strong>단계 ${idx+1} / ${total}</strong> &nbsp; ${labels[state.currentStepId] || ''}`;
+}
+
+
+// ══════════════════════════════════════════════════════
+// RENDER: Trades (Step 2) — 가격 없음
+// ══════════════════════════════════════════════════════
+
+function renderTrades() {
+  const container = document.getElementById('tradeContainer');
+  container.innerHTML = TRADES.map(trade => {
+    const sel = state.tradeSelections[trade.id];
+    const scope = trade.scopes.find(s => s.id === sel.scope);
+    const hasSelection = sel.scope !== 'none' || sel.options.length > 0;
+
+    return `
+    <div class="trade-section" data-trade="${trade.id}">
+      <div class="trade-header" onclick="toggleTrade('${trade.id}')">
+        <div class="trade-icon">${trade.icon}</div>
+        <div class="trade-name">${trade.name}</div>
+        <div class="trade-status ${hasSelection?'has-selection':''}">${hasSelection ? (scope?.name || '') + (sel.options.length ? ' +' + sel.options.length + '건' : '') : '미선택'}</div>
+        <div class="trade-toggle">▼</div>
+      </div>
+      <div class="trade-body" id="tradeBody_${trade.id}">
+        <div class="why-panel">
+          <div class="why-panel-title">왜 이 항목이 중요한가요?</div>
+          <p>${trade.why}</p>
+        </div>
+
+        <div class="scope-group">
+          <div class="scope-group-title">공사 범위 선택</div>
+          <div class="scope-options">
+            ${trade.scopes.map(s => `
+              <div class="scope-option ${sel.scope===s.id?'selected':''}"
+                   data-trade="${trade.id}" data-scope="${s.id}"
+                   onclick="selectScope('${trade.id}','${s.id}')">
+                <div class="scope-radio"></div>
+                <div>
+                  <div class="scope-option-name">${s.name}</div>
+                  <div class="scope-option-desc">${s.desc}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        ${trade.subScopes ? `
+          <div class="scope-group" id="subScope_${trade.id}" style="display:${shouldShowSubScope(trade)?'block':'none'}">
+            <div class="scope-group-title">${trade.subScopes.label}</div>
+            <div class="scope-options">
+              ${trade.subScopes.items.map(s => `
+                <div class="scope-option ${sel.subScope===s.id?'selected':''}"
+                     data-trade="${trade.id}" data-subscope="${s.id}"
+                     onclick="selectSubScope('${trade.id}','${s.id}')">
+                  <div class="scope-radio"></div>
+                  <div>
+                    <div class="scope-option-name">${s.name}</div>
+                    <div class="scope-option-desc">${s.desc}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${trade.options.length > 0 ? `
+          <div class="scope-group">
+            <div class="scope-group-title">선택 사항</div>
+            <div class="option-checks">
+              ${trade.options.map(o => `
+                <div class="option-check ${sel.options.includes(o.id)?'checked':''}"
+                     data-trade="${trade.id}" data-opt="${o.id}"
+                     onclick="toggleOption('${trade.id}','${o.id}')">
+                  <div class="option-checkbox"></div>
+                  <span>${o.name}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="standards-panel">
+          <div class="standards-toggle" onclick="toggleStandards(this)">
+            <span class="arrow">▶</span>
+            <span>시공 준수 사항 (더보다 기준)</span>
+          </div>
+          <ul class="standards-list">
+            ${trade.standards.map(s => `<li>${s}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function shouldShowSubScope(trade) {
+  if (!trade.subScopes) return false;
+  const requires = trade.subScopes.requires.split(',');
+  return requires.includes(state.tradeSelections[trade.id].scope);
+}
+
+function toggleTrade(id) {
+  const header = document.querySelector(`[data-trade="${id}"] .trade-header`);
+  const body = document.getElementById('tradeBody_' + id);
+  header.classList.toggle('expanded');
+  body.classList.toggle('show');
+}
+
+function selectScope(tradeId, scopeId) {
+  state.tradeSelections[tradeId].scope = scopeId;
+  const trade = TRADES.find(t => t.id === tradeId);
+
+  if (trade.subScopes) {
+    const subEl = document.getElementById('subScope_' + tradeId);
+    if (subEl) {
+      const show = shouldShowSubScope(trade);
+      subEl.style.display = show ? 'block' : 'none';
+      if (!show) state.tradeSelections[tradeId].subScope = null;
+    }
+  }
+
+  // Update scope UI
+  document.querySelectorAll(`.scope-option[data-trade="${tradeId}"][data-scope]`).forEach(el => {
+    el.classList.toggle('selected', el.dataset.scope === scopeId);
+  });
+
+  updateTradeStatus(tradeId);
+}
+
+function selectSubScope(tradeId, subId) {
+  state.tradeSelections[tradeId].subScope = subId;
+  document.querySelectorAll(`.scope-option[data-trade="${tradeId}"][data-subscope]`).forEach(el => {
+    el.classList.toggle('selected', el.dataset.subscope === subId);
+  });
+  updateTradeStatus(tradeId);
+}
+
+function toggleOption(tradeId, optId) {
+  const opts = state.tradeSelections[tradeId].options;
+  const idx = opts.indexOf(optId);
+  if (idx >= 0) opts.splice(idx, 1); else opts.push(optId);
+
+  document.querySelectorAll(`.option-check[data-trade="${tradeId}"]`).forEach(el => {
+    el.classList.toggle('checked', opts.includes(el.dataset.opt));
+  });
+
+  updateTradeStatus(tradeId);
+}
+
+function updateTradeStatus(tradeId) {
+  const sel = state.tradeSelections[tradeId];
+  const trade = TRADES.find(t => t.id === tradeId);
+  const scope = trade.scopes.find(s => s.id === sel.scope);
+  const hasSelection = sel.scope !== 'none' || sel.options.length > 0;
+
+  const statusEl = document.querySelector(`[data-trade="${tradeId}"] .trade-status`);
+  statusEl.className = 'trade-status' + (hasSelection ? ' has-selection' : '');
+  statusEl.textContent = hasSelection
+    ? (scope?.name || '') + (sel.options.length ? ' +' + sel.options.length + '건' : '')
+    : '미선택';
+}
+
+function toggleStandards(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('show');
+}
+
+function getTradeTotal(tradeId) {
+  const trade = TRADES.find(t => t.id === tradeId);
+  const sel = state.tradeSelections[tradeId];
+  let total = 0;
+  const scope = trade.scopes.find(s => s.id === sel.scope);
+  if (scope) total += scope.price;
+  if (trade.subScopes && sel.subScope) {
+    const sub = trade.subScopes.items.find(s => s.id === sel.subScope);
+    if (sub) total += sub.price;
+  }
+  sel.options.forEach(oid => {
+    const opt = trade.options.find(o => o.id === oid);
+    if (opt) total += opt.price;
+  });
+  return total;
+}
+
+
+// ══════════════════════════════════════════════════════
+// RENDER: Design Types (Step 3)
+// ══════════════════════════════════════════════════════
+
+function renderDesignTypes() {
+  const container = document.getElementById('designTypes');
+  container.innerHTML = DESIGN_TYPES.map(dt => `
+    <div class="design-card ${state.designType===dt.id?'selected':''}" onclick="selectDesignType('${dt.id}')">
+      <div class="design-preview">
+        <div class="design-swatches">
+          ${dt.colors.map(c => `<div style="background:${c}"></div>`).join('')}
+        </div>
+        <div class="design-badge">선택됨</div>
+      </div>
+      <div class="design-card-body">
+        <div class="design-card-name">${dt.name}</div>
+        <div class="design-card-desc">${dt.desc}</div>
+      </div>
+    </div>
+  `).join('');
+  if (state.designType) showDesignDetail(state.designType);
+}
+
+function selectDesignType(id) {
+  state.designType = id;
+  setDefaultFinishes(id);
+  document.querySelectorAll('.design-card').forEach(el => {
+    el.classList.toggle('selected', el.getAttribute('onclick').includes("'" + id + "'"));
+  });
+  showDesignDetail(id);
+}
+
+function showDesignDetail(id) {
+  const dt = DESIGN_TYPES.find(d => d.id === id);
+  const card = document.getElementById('designDetailCard');
+  card.style.display = 'block';
+  document.getElementById('designDetailTitle').textContent = dt.name + ' 구성';
+  document.getElementById('designDetailDesc').textContent = '선택하신 타입의 기본 마감재 구성입니다. 다음 단계에서 개별 변경할 수 있습니다.';
+  document.getElementById('designDetailContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      ${Object.entries(dt.details).map(([k,v]) => `
+        <div style="padding:12px;background:var(--bg-section);border-radius:var(--radius-sm)">
+          <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px">${k}</div>
+          <div style="font-size:.85rem;font-weight:600">${v}</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function setDefaultFinishes(typeId) {
+  const defaults = {
+    clean_white:  { wallpaper:'mid', film:'partial', paint:'none', flooring:'laminate', sink:'mid', hood:'basic', door:'basic', entrance:'3fold', closet:'basic', shoes:'floating', toilet:'mid', basin:'basic', bath_faucet:'mid', bath_tile:'mid', bath_cabinet:'basic', entry_tile:'mid', kitchen_tile:'mid' },
+    natural_wood: { wallpaper:'mid', film:'partial', paint:'none', flooring:'premium_laminate', sink:'mid', hood:'chimney', door:'design', entrance:'sliding', closet:'basic', shoes:'floating', toilet:'mid', basin:'pedestal', bath_faucet:'mid', bath_tile:'mid', bath_cabinet:'premium', entry_tile:'mid', kitchen_tile:'mid' },
+    modern_grey:  { wallpaper:'premium', film:'full', paint:'partial', flooring:'premium_laminate', sink:'premium', hood:'chimney', door:'design', entrance:'steel', closet:'premium', shoes:'premium', toilet:'premium', basin:'premium', bath_faucet:'premium', bath_tile:'premium', bath_cabinet:'premium', entry_tile:'premium', kitchen_tile:'premium' },
+  };
+  state.finishSelections = { ...(defaults[typeId] || {}) };
+}
+
+
+// ══════════════════════════════════════════════════════
+// RENDER: Finish Items (Step 4) — 가격 없음
+// ══════════════════════════════════════════════════════
+
+function renderFinishItems() {
+  const typeName = DESIGN_TYPES.find(d => d.id === state.designType)?.name || '-';
+  document.getElementById('selectedTypeName').textContent = typeName;
+
+  const container = document.getElementById('finishContainer');
+  container.innerHTML = FINISH_CATEGORIES.map(cat => `
+    <div class="finish-category">
+      <div class="finish-category-title">${cat.name}</div>
+      ${cat.items.map(item => `
+        <div class="finish-item">
+          <div class="finish-item-name">${item.name}</div>
+          <div class="finish-item-options">
+            ${item.options.map(opt => `
+              <div class="finish-option ${state.finishSelections[item.id]===opt.id?'selected':''}"
+                   onclick="selectFinish('${item.id}','${opt.id}')">
+                ${opt.name}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function selectFinish(itemId, optId) {
+  state.finishSelections[itemId] = optId;
+  renderFinishItems();
+}
+
+function getFinishPrice(itemId) {
+  const optId = state.finishSelections[itemId];
+  if (!optId) return 0;
+  for (const cat of FINISH_CATEGORIES) {
+    for (const item of cat.items) {
+      if (item.id === itemId) {
+        const opt = item.options.find(o => o.id === optId);
+        return opt ? opt.price : 0;
+      }
+    }
+  }
+  return 0;
+}
+
+function getFinishTotal() {
+  let total = 0;
+  for (const id in state.finishSelections) total += getFinishPrice(id);
+  return total;
+}
+
+
+// ══════════════════════════════════════════════════════
+// RENDER: Result (Step 5) — 유일하게 가격 표시
+// ══════════════════════════════════════════════════════
+
+function renderResult() {
+  const container = document.getElementById('resultContainer');
+  const info = {
+    complex: document.getElementById('infoComplex')?.value || '-',
+    unit: document.getElementById('infoUnit')?.value || '-',
+  };
+
+  let tradeTotal = 0;
+  TRADES.forEach(t => tradeTotal += getTradeTotal(t.id));
+  const finishTotal = getFinishTotal();
+  const grandTotal = tradeTotal + finishTotal;
+
+  const designType = DESIGN_TYPES.find(d => d.id === state.designType);
+  const workLabels = { repair:'수리', partial:'부분 인테리어', full:'전체 리모델링' };
+  const showFinish = state.workType === 'partial' || state.workType === 'full';
+
+  container.innerHTML = `
+    <div class="result-header">
+      <div style="font-size:.82rem;opacity:.5;margin-bottom:4px">${info.complex} ${info.unit} · ${workLabels[state.workType] || ''}</div>
+      <div class="result-total-label">예상 견적 합계</div>
+      <div class="result-total">${grandTotal.toLocaleString()}<small>만원</small></div>
+      ${showFinish ? `<div class="result-range">기능·설비 ${tradeTotal.toLocaleString()}만원 + 마감·인테리어 ${finishTotal.toLocaleString()}만원</div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="result-section-title">기능 · 설비 공사</div>
+      <div class="result-breakdown">
+        ${TRADES.map(t => {
+          const total = getTradeTotal(t.id);
+          const sel = state.tradeSelections[t.id];
+          const scope = t.scopes.find(s => s.id === sel.scope);
+          const optNames = sel.options.map(oid => t.options.find(o=>o.id===oid)?.name).filter(Boolean);
+          if (total === 0 && sel.scope === 'none' && sel.options.length === 0) return '';
+          return `
+            <div class="result-row">
+              <div>
+                <div class="result-row-label"><span class="icon">${t.icon}</span> ${t.name}</div>
+                <div class="result-row-detail">${scope ? scope.name : '-'}${optNames.length ? ' + ' + optNames.join(', ') : ''}</div>
+              </div>
+              <div class="result-row-amount">${total.toLocaleString()}만원</div>
+            </div>`;
+        }).join('')}
+        ${tradeTotal === 0 ? '<div class="result-row"><div class="result-row-label" style="color:var(--text-muted)">선택된 기능·설비 공사가 없습니다</div><div class="result-row-amount">-</div></div>' : ''}
+      </div>
+    </div>
+
+    ${showFinish ? `
+    <div class="card" style="margin-top:16px">
+      <div class="result-section-title">마감 · 인테리어 ${designType ? '(' + designType.name + ')' : ''}</div>
+      <div class="result-breakdown">
+        ${FINISH_CATEGORIES.map(cat => {
+          const catTotal = cat.items.reduce((sum, item) => sum + getFinishPrice(item.id), 0);
+          if (catTotal === 0) return '';
+          const itemDescs = cat.items.map(item => {
+            const optId = state.finishSelections[item.id];
+            const opt = item.options.find(o => o.id === optId);
+            return opt && opt.price > 0 ? item.name + ': ' + opt.name : null;
+          }).filter(Boolean);
+          return `
+            <div class="result-row">
+              <div>
+                <div class="result-row-label">${cat.name}</div>
+                <div class="result-row-detail">${itemDescs.join(' · ')}</div>
+              </div>
+              <div class="result-row-amount">${catTotal.toLocaleString()}만원</div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="card" style="margin-top:16px;text-align:center;padding:20px">
+      <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:8px">
+        본 견적은 선택 범위 기준 예상 금액이며, 현장 실측 및 상세 협의 후 확정됩니다.
+      </div>
+      <div style="font-size:.78rem;color:var(--text-muted)">
+        더보다 | ${new Date().toLocaleDateString('ko-KR')} 생성
+      </div>
+    </div>
+  `;
+}
+
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+
+renderTrades();
+renderSidebar();
+updateBarInfo();
+</script>
+</body>
+</html>
