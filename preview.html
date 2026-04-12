@@ -810,7 +810,7 @@ async function renderReport() {
   // 인라인 스타일은 외부 CSS(!important 포함)까지 이김 → PDF 인쇄 시 backdrop-filter 렌더 실패·
   // color-adjust economy 등 Chrome 인쇄 엔진 이슈를 확실히 우회
   pages.push(`
-    <div class="report-page cover-page" style="background:#4e6a85 !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; position:relative; overflow:hidden">
+    <div class="report-page cover-page" style="background:#3b5f82 !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; position:relative; overflow:hidden">
       <span class="page-label no-print">표지</span>
 
       <!-- 인증 도장 이미지 — 하단 45%에 작게, 매우 연하게 -->
