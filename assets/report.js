@@ -1041,6 +1041,7 @@ function calcStats(report) {
         case 'normal': counts.normal++; break;
         case 'bad':    counts.bad++;    break;
         case 'danger': counts.danger++; break;
+        case 'na':     counts.na++;     break;
         default:       counts.empty++;  break;
       }
     });
